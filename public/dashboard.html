@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIIS Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">TIIS</h1>
+                <button id="mobile-menu-close" class="btn-icon mobile-only" title="Close menu">×</button>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">U</div>
+                <div class="user-details">
+                    <div class="user-name" id="user-name">Loading...</div>
+                    <div class="user-menu">
+                        <button id="logout-btn" class="btn-text">Logout</button>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="conversation-nav">
+                <div class="nav-header">
+                    <h3>Conversations</h3>
+                    <button id="new-task-btn" class="btn btn-secondary btn-sm" title="New Task">
+                        + New Task
+                    </button>
+                </div>
+                
+                <div id="conversation-list" class="conversation-list">
+                    <div class="loading-message">Loading conversations...</div>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="storage-info">
+                    <div class="storage-label">Storage Used</div>
+                    <div class="storage-bar">
+                        <div id="storage-fill" class="storage-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="storage-text" id="storage-text">0 MB / 25 MB</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="chat-header">
+                <button id="mobile-menu-toggle" class="btn-icon mobile-only" title="Menu">☰</button>
+                <h2 id="chat-title">Welcome</h2>
+                <div class="header-actions">
+                    <button id="delete-conversation-btn" class="btn btn-danger btn-sm hidden">Delete</button>
+                </div>
+            </header>
+
+            <!-- Welcome Screen (shown when no conversation selected) -->
+            <div id="welcome-screen" class="welcome-screen">
+                <div class="welcome-content">
+                    <h2>Welcome to TIIS</h2>
+                    <p class="welcome-subtitle">TrueNorth Intelligent Intake System</p>
+                    
+                    <div class="welcome-section">
+                        <h3>📋 Complete Your Onboarding</h3>
+                        <p>Start by completing your onboarding conversation. This helps us understand your role and workflows.</p>
+                        <button id="start-onboarding-btn" class="btn btn-primary">
+                            Start Onboarding
+                        </button>
+                    </div>
+                    
+                    <div class="welcome-section">
+                        <h3>📝 Document Your Tasks</h3>
+                        <p>After onboarding, create task conversations to document specific workflows. Click "+ New Task" anytime.</p>
+                    </div>
+                    
+                    <div class="welcome-section">
+                        <h3>📸 Add Screenshots</h3>
+                        <p>Upload screenshots, PDFs, and photos to help illustrate your processes. Visual documentation makes analysis more accurate.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chat-area" class="chat-area hidden">
+                <div id="messages" class="messages-container"></div>
+                
+                <div id="typing-indicator" class="typing-indicator hidden">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                
+                <!-- Input Area -->
+                <div class="input-area">
+                    <input 
+                        type="file" 
+                        id="file-input" 
+                        accept="image/*,application/pdf" 
+                        multiple 
+                        style="display: none;"
+                    >
+                    
+                    <div class="attachment-preview" id="attachment-preview"></div>
+                    
+                    <div class="input-row">
+                        <button id="attach-btn" class="btn-icon" title="Attach files">📎</button>
+                        
+                        <textarea 
+                            id="user-input" 
+                            placeholder="Type your message here..."
+                            rows="2"
+                        ></textarea>
+                        
+                        <button id="send-btn" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Summary Modal (for onboarding completion) -->
+    <div id="summary-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <h2>Review Your Summary</h2>
+            <p>Please review this summary. You can modify it or approve to complete this conversation.</p>
+            
+            <div id="summary-text" class="summary-text"></div>
+            
+            <div class="modal-actions">
+                <button id="modify-summary-btn" class="btn btn-secondary">
+                    Modify
+                </button>
+                <button id="approve-summary-btn" class="btn btn-primary">
+                    Approve
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Delete Conversation?</h2>
+            <p>This will permanently delete this conversation and all attachments. This cannot be undone.</p>
+            
+            <div class="modal-actions">
+                <button id="cancel-delete-btn" class="btn btn-secondary">
+                    Cancel
+                </button>
+                <button id="confirm-delete-btn" class="btn btn-danger">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

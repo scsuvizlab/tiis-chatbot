@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIIS Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional admin-specific styles */
+        .admin-container {
+            min-height: 100vh;
+            background: var(--bg-secondary);
+        }
+
+        .admin-header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-header h1 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .admin-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-subtext {
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+            margin-top: 0.25rem;
+        }
+
+        .section {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .users-table td {
+            padding: 1rem 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .users-table tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .user-email {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon-small {
+            padding: 0.375rem 0.625rem;
+            font-size: 0.8125rem;
+        }
+
+        .report-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .report-box {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.5rem;
+        }
+
+        .report-box h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.125rem;
+        }
+
+        .report-box p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-size: 0.9375rem;
+        }
+
+        .user-selector {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .modal-large-content {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .conversation-item-admin {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .conversation-item-admin:hover {
+            background: var(--bg-hover);
+        }
+
+        .conversation-item-admin h4 {
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+
+        .conversation-item-admin p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        .report-preview {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .admin-content {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .report-section {
+                grid-template-columns: 1fr;
+            }
+
+            .users-table {
+                font-size: 0.875rem;
+            }
+
+            .users-table th,
+            .users-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="admin-login-screen" class="login-container">
+        <div class="logo-section">
+            <h1>TIIS Admin</h1>
+            <p class="tagline">Administration Dashboard</p>
+        </div>
+
+        <div class="auth-form">
+            <h2>Admin Login</h2>
+            <p class="form-description">Enter admin password to continue</p>
+            
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label for="admin-password">Password</label>
+                    <input 
+                        type="password" 
+                        id="admin-password" 
+                        name="password" 
+                        required 
+                        autofocus
+                        placeholder="Enter admin password"
+                    >
+                </div>
+                
+                <div id="admin-login-error" class="error-message hidden"></div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    Sign In
+                </button>
+            </form>
+        </div>
+
+        <div class="footer-info">
+            <p>TrueNorth AI Services LLC</p>
+        </div>
+    </div>
+
+    <!-- Main Admin Dashboard -->
+    <div id="admin-dashboard" class="admin-container hidden">
+        <!-- Header -->
+        <header class="admin-header">
+            <h1>🛠️ TIIS Admin Dashboard</h1>
+            <button id="admin-logout-btn" class="btn btn-secondary">Logout</button>
+        </header>
+
+        <div class="admin-content">
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-value" id="stat-total-users">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Onboarding Complete</div>
+                    <div class="stat-value" id="stat-onboarding">0/0</div>
+                    <div class="stat-subtext" id="stat-onboarding-percent">0%</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Total Tasks</div>
+                    <div class="stat-value" id="stat-tasks">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Total Messages</div>
+                    <div class="stat-value" id="stat-messages">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Storage Used</div>
+                    <div class="stat-value" id="stat-storage">0 MB</div>
+                    <div class="stat-subtext">of 150 MB total</div>
+                </div>
+            </div>
+
+            <!-- User Management -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">User Management</h2>
+                    <button id="create-user-btn" class="btn btn-primary">+ Create User</button>
+                </div>
+
+                <div id="users-table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Tasks</th>
+                                <th>Messages</th>
+                                <th>Storage</th>
+                                <th>Last Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 2rem;">
+                                    Loading users...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Report Generation -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Report Generation</h2>
+                </div>
+
+                <div class="report-section">
+                    <!-- Corporation Report -->
+                    <div class="report-box">
+                        <h3>📊 Corporation-Wide Analysis</h3>
+                        <p>Generate comprehensive workflow analysis across all employees, identifying automation opportunities and efficiency improvements.</p>
+                        <button id="generate-corp-report-btn" class="btn btn-primary btn-full">
+                            Generate Corporation Report
+                        </button>
+                    </div>
+
+                    <!-- Individual Report -->
+                    <div class="report-box">
+                        <h3>👤 Individual Employee Report</h3>
+                        <p>Generate personalized efficiency analysis for a specific employee.</p>
+                        <select id="individual-report-user" class="user-selector">
+                            <option value="">Select employee...</option>
+                        </select>
+                        <button id="generate-individual-report-btn" class="btn btn-primary btn-full">
+                            Generate Individual Report
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Export -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Data Export</h2>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Export all user data, conversations, and metadata as JSON for backup or external analysis.
+                </p>
+
+                <button id="export-all-btn" class="btn btn-secondary">
+                    📥 Export All Data (JSON)
+                </button>
+            </section>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="create-user-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Create New User</h2>
+            <p>Enter details for the new employee account.</p>
+            
+            <form id="create-user-form">
+                <div class="form-group">
+                    <label for="new-user-email">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="new-user-email" 
+                        required
+                        placeholder="employee@gscdc.org"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-user-name">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="new-user-name" 
+                        required
+                        placeholder="John Smith"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-user-role">Job Title/Role</label>
+                    <input 
+                        type="text" 
+                        id="new-user-role" 
+                        required
+                        placeholder="Marketing Director"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-user-password">Temporary Password</label>
+                    <input 
+                        type="text" 
+                        id="new-user-password" 
+                        required
+                        minlength="8"
+                        placeholder="Min 8 characters"
+                    >
+                    <small style="color: var(--text-secondary);">User will be required to change this on first login</small>
+                </div>
+                
+                <div id="create-user-error" class="error-message hidden"></div>
+                
+                <div class="modal-actions">
+                    <button type="button" id="cancel-create-user-btn" class="btn btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Create User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="reset-password-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Reset User Password</h2>
+            <p>Create a new temporary password for <strong id="reset-user-name"></strong>.</p>
+            
+            <form id="reset-password-form">
+                <div class="form-group">
+                    <label for="reset-new-password">New Temporary Password</label>
+                    <input 
+                        type="text" 
+                        id="reset-new-password" 
+                        required
+                        minlength="8"
+                        placeholder="Min 8 characters"
+                    >
+                    <small style="color: var(--text-secondary);">User will be required to change this on next login</small>
+                </div>
+                
+                <div id="reset-password-error" class="error-message hidden"></div>
+                
+                <div class="modal-actions">
+                    <button type="button" id="cancel-reset-password-btn" class="btn btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Reset Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete User Modal -->
+    <div id="delete-user-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Delete User Account?</h2>
+            <p>You are about to permanently delete <strong id="delete-user-name"></strong>.</p>
+            <p style="color: var(--danger-color);">
+                ⚠️ This will delete:
+            </p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-secondary);">
+                <li>User account</li>
+                <li>All conversations</li>
+                <li>All attachments</li>
+            </ul>
+            <p style="color: var(--danger-color); font-weight: 500;">
+                This action cannot be undone.
+            </p>
+            
+            <div class="modal-actions">
+                <button id="cancel-delete-user-btn" class="btn btn-secondary">
+                    Cancel
+                </button>
+                <button id="confirm-delete-user-btn" class="btn btn-danger">
+                    Delete User
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Conversations Modal -->
+    <div id="view-conversations-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <h2>Conversations: <span id="conversations-user-name"></span></h2>
+            
+            <div id="conversations-list" class="modal-large-content">
+                <p style="text-align: center; padding: 2rem;">Loading conversations...</p>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="close-conversations-btn" class="btn btn-secondary">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Preview Modal -->
+    <div id="report-preview-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <h2 id="report-preview-title">Report Generated</h2>
+            
+            <div class="modal-large-content">
+                <div id="report-preview-content" class="report-preview"></div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="download-report-btn" class="btn btn-primary">
+                    Download Report
+                </button>
+                <button id="close-report-btn" class="btn btn-secondary">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Credentials Modal (shown after creating user) -->
+    <div id="user-credentials-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>✅ User Created Successfully</h2>
+            <p>Share these credentials with the employee:</p>
+            
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+                <p style="margin-bottom: 0.5rem;"><strong>Website:</strong> <span id="cred-website"></span></p>
+                <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> <span id="cred-email"></span></p>
+                <p style="margin-bottom: 0;"><strong>Temporary Password:</strong> <span id="cred-password"></span></p>
+            </div>
+            
+            <p style="color: var(--text-secondary); font-size: 0.875rem;">
+                ℹ️ The user will be required to create a new password on first login.
+            </p>
+            
+            <div class="modal-actions">
+                <button id="copy-credentials-btn" class="btn btn-secondary">
+                    Copy to Clipboard
+                </button>
+                <button id="close-credentials-btn" class="btn btn-primary">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin-dashboard.js"></script>
+</body>
+</html>

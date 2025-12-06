@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIIS Login - TrueNorth Intelligent Intake System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-section">
+            <h1>TIIS</h1>
+            <p class="tagline">TrueNorth Intelligent Intake System</p>
+        </div>
+
+        <!-- Main Login Form -->
+        <div id="login-form" class="auth-form">
+            <h2>Welcome Back</h2>
+            <p class="form-description">Sign in to continue documenting your workflows</p>
+            
+            <form id="login-form-element">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        required 
+                        autofocus
+                        placeholder="your.email@gscdc.org"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required
+                        placeholder="Enter your password"
+                    >
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="remember-me" checked>
+                        <span>Remember me (7 days)</span>
+                    </label>
+                </div>
+                
+                <div id="login-error" class="error-message"></div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    Sign In
+                </button>
+            </form>
+        </div>
+
+        <!-- Password Change Modal (shown on first login) -->
+        <div id="password-change-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Create Your Password</h2>
+                <p>Welcome! Please create a new password for your account.</p>
+                
+                <form id="password-change-form">
+                    <button type="button" onclick="alert('tempToken: ' + tempToken)" style="margin-bottom: 10px; background: orange;">DEBUG: Check Token</button>
+                    
+                    <div class="form-group">
+                        <label for="new-password">New Password</label>
+                        <input 
+                            type="password" 
+                            id="new-password" 
+                            name="new_password" 
+                            required
+                            minlength="8"
+                            placeholder="At least 8 characters"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm Password</label>
+                        <input 
+                            type="password" 
+                            id="confirm-password" 
+                            name="confirm_password" 
+                            required
+                            minlength="8"
+                            placeholder="Re-enter your password"
+                        >
+                    </div>
+                    
+                    <div class="password-requirements">
+                        <p>Password requirements:</p>
+                        <ul>
+                            <li>At least 8 characters long</li>
+                            <li>Mix of letters and numbers recommended</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="password-error" class="error-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary btn-full">
+                        Set Password & Continue
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="footer-info">
+            <p>TrueNorth AI Services LLC</p>
+            <p class="text-muted">Greater St. Cloud Development Corporation Pilot</p>
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>
