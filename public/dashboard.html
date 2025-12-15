@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TIIS Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="user-voice-styles.css">
 </head>
 <body>
     <div class="dashboard-container">
@@ -130,7 +131,7 @@
     <div id="summary-modal" class="modal hidden">
         <div class="modal-content modal-large">
             <h2>Review Your Summary</h2>
-            <p>Please review this summary. You can modify it or approve to complete this conversation.</p>
+            <p>Please review this summary of your onboarding conversation. You can ask for changes or approve it to continue.</p>
             
             <div id="summary-text" class="summary-text"></div>
             
@@ -162,6 +163,8 @@
         </div>
     </div>
 
+    <script src="user-voice-interface.js"></script>
+    <script src="simple-voice-playback.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>

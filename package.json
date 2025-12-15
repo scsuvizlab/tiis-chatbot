@@ -1,6 +1,6 @@
 {
   "name": "tiis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "TrueNorth Intelligent Intake System - Virtual Job Shadow Platform",
   "main": "server/server.js",
   "scripts": {
@@ -13,7 +13,10 @@
     "analysis",
     "job-shadow",
     "automation",
-    "claude"
+    "claude",
+    "voice",
+    "speech-to-text",
+    "text-to-speech"
   ],
   "author": "TrueNorth AI Services",
   "license": "ISC",
@@ -24,7 +27,9 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
-    "jsonwebtoken": "^9.0.2"
+    "form-data": "^4.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

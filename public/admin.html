@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TIIS Admin Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="voice-management-styles.css">
     <style>
-        /* Additional admin-specific styles */
+        /* Admin-specific styles */
         .admin-container {
             min-height: 100vh;
             background: var(--bg-secondary);
@@ -24,6 +25,12 @@
         .admin-header h1 {
             font-size: 1.5rem;
             color: var(--primary-color);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
         }
 
         .admin-content {
@@ -241,6 +248,11 @@
             .users-table td {
                 padding: 0.5rem;
             }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -287,7 +299,12 @@
         <!-- Header -->
         <header class="admin-header">
             <h1>🛠️ TIIS Admin Dashboard</h1>
-            <button id="admin-logout-btn" class="btn btn-secondary">Logout</button>
+            <div class="header-actions">
+                <button id="voice-management-btn" class="voice-management-btn">
+                    Voice Settings
+                </button>
+                <button id="admin-logout-btn" class="btn btn-secondary">Logout</button>
+            </div>
         </header>
 
         <div class="admin-content">
@@ -317,136 +334,109 @@
                 <div class="stat-card">
                     <div class="stat-label">Storage Used</div>
                     <div class="stat-value" id="stat-storage">0 MB</div>
-                    <div class="stat-subtext">of 150 MB total</div>
                 </div>
             </div>
 
             <!-- User Management -->
-            <section class="section">
+            <div class="section">
                 <div class="section-header">
-                    <h2 class="section-title">User Management</h2>
-                    <button id="create-user-btn" class="btn btn-primary">+ Create User</button>
+                    <h2 class="section-title">👥 User Management</h2>
+                    <button id="create-user-btn" class="btn btn-primary">
+                        ➕ Create User
+                    </button>
                 </div>
+                
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Tasks</th>
+                            <th>Messages</th>
+                            <th>Storage</th>
+                            <th>Last Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 2rem;">
+                                Loading users...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                <div id="users-table-container">
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Tasks</th>
-                                <th>Messages</th>
-                                <th>Storage</th>
-                                <th>Last Active</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body">
-                            <tr>
-                                <td colspan="8" style="text-align: center; padding: 2rem;">
-                                    Loading users...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Report Generation -->
-            <section class="section">
+            <!-- Reports -->
+            <div class="section">
                 <div class="section-header">
-                    <h2 class="section-title">Report Generation</h2>
+                    <h2 class="section-title">📊 Analysis & Reports</h2>
                 </div>
-
+                
                 <div class="report-section">
-                    <!-- Corporation Report -->
                     <div class="report-box">
-                        <h3>📊 Corporation-Wide Analysis</h3>
-                        <p>Generate comprehensive workflow analysis across all employees, identifying automation opportunities and efficiency improvements.</p>
+                        <h3>Corporation-Wide Analysis</h3>
+                        <p>Generate comprehensive analysis across all employees</p>
                         <button id="generate-corp-report-btn" class="btn btn-primary btn-full">
-                            Generate Corporation Report
+                            🏢 Generate Corporation Report
                         </button>
                     </div>
-
-                    <!-- Individual Report -->
+                    
                     <div class="report-box">
-                        <h3>👤 Individual Employee Report</h3>
-                        <p>Generate personalized efficiency analysis for a specific employee.</p>
+                        <h3>Individual Analysis</h3>
+                        <p>Generate detailed report for a specific employee</p>
                         <select id="individual-report-user" class="user-selector">
-                            <option value="">Select employee...</option>
+                            <option value="">Select a user...</option>
                         </select>
                         <button id="generate-individual-report-btn" class="btn btn-primary btn-full">
-                            Generate Individual Report
+                            👤 Generate Individual Report
                         </button>
                     </div>
                 </div>
-            </section>
+            </div>
 
             <!-- Data Export -->
-            <section class="section">
+            <div class="section">
                 <div class="section-header">
-                    <h2 class="section-title">Data Export</h2>
+                    <h2 class="section-title">📥 Data Export</h2>
                 </div>
-
                 <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                    Export all user data, conversations, and metadata as JSON for backup or external analysis.
+                    Export all system data including users, conversations, and attachments metadata.
                 </p>
-
                 <button id="export-all-btn" class="btn btn-secondary">
                     📥 Export All Data (JSON)
                 </button>
-            </section>
+            </div>
         </div>
     </div>
 
-    <!-- Create User Modal -->
+    <!-- CREATE USER MODAL -->
     <div id="create-user-modal" class="modal hidden">
         <div class="modal-content">
             <h2>Create New User</h2>
-            <p>Enter details for the new employee account.</p>
             
             <form id="create-user-form">
                 <div class="form-group">
-                    <label for="new-user-email">Email Address</label>
-                    <input 
-                        type="email" 
-                        id="new-user-email" 
-                        required
-                        placeholder="employee@gscdc.org"
-                    >
+                    <label for="new-user-email">Email</label>
+                    <input type="email" id="new-user-email" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="new-user-name">Full Name</label>
-                    <input 
-                        type="text" 
-                        id="new-user-name" 
-                        required
-                        placeholder="John Smith"
-                    >
+                    <input type="text" id="new-user-name" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="new-user-role">Job Title/Role</label>
-                    <input 
-                        type="text" 
-                        id="new-user-role" 
-                        required
-                        placeholder="Marketing Director"
-                    >
+                    <label for="new-user-role">Role/Position</label>
+                    <input type="text" id="new-user-role" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="new-user-password">Temporary Password</label>
-                    <input 
-                        type="text" 
-                        id="new-user-password" 
-                        required
-                        minlength="8"
-                        placeholder="Min 8 characters"
-                    >
-                    <small style="color: var(--text-secondary);">User will be required to change this on first login</small>
+                    <input type="text" id="new-user-password" required>
+                    <small>User will be prompted to change on first login</small>
                 </div>
                 
                 <div id="create-user-error" class="error-message hidden"></div>
@@ -463,23 +453,17 @@
         </div>
     </div>
 
-    <!-- Reset Password Modal -->
+    <!-- RESET PASSWORD MODAL -->
     <div id="reset-password-modal" class="modal hidden">
         <div class="modal-content">
-            <h2>Reset User Password</h2>
-            <p>Create a new temporary password for <strong id="reset-user-name"></strong>.</p>
+            <h2>Reset Password</h2>
+            <p id="reset-user-name" style="margin-bottom: 1.5rem; font-weight: 500;"></p>
             
             <form id="reset-password-form">
                 <div class="form-group">
                     <label for="reset-new-password">New Temporary Password</label>
-                    <input 
-                        type="text" 
-                        id="reset-new-password" 
-                        required
-                        minlength="8"
-                        placeholder="Min 8 characters"
-                    >
-                    <small style="color: var(--text-secondary);">User will be required to change this on next login</small>
+                    <input type="text" id="reset-new-password" required>
+                    <small>User will be prompted to change on next login</small>
                 </div>
                 
                 <div id="reset-password-error" class="error-message hidden"></div>
@@ -496,21 +480,13 @@
         </div>
     </div>
 
-    <!-- Delete User Modal -->
+    <!-- DELETE USER MODAL -->
     <div id="delete-user-modal" class="modal hidden">
         <div class="modal-content">
-            <h2>Delete User Account?</h2>
-            <p>You are about to permanently delete <strong id="delete-user-name"></strong>.</p>
+            <h2>Delete User</h2>
+            <p>Are you sure you want to delete <strong id="delete-user-name"></strong>?</p>
             <p style="color: var(--danger-color);">
-                ⚠️ This will delete:
-            </p>
-            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-secondary);">
-                <li>User account</li>
-                <li>All conversations</li>
-                <li>All attachments</li>
-            </ul>
-            <p style="color: var(--danger-color); font-weight: 500;">
-                This action cannot be undone.
+                This will permanently delete all user data and conversations. This cannot be undone.
             </p>
             
             <div class="modal-actions">
@@ -524,57 +500,59 @@
         </div>
     </div>
 
-    <!-- View Conversations Modal -->
+    <!-- VIEW CONVERSATIONS MODAL -->
     <div id="view-conversations-modal" class="modal hidden">
-        <div class="modal-content modal-large">
-            <h2>Conversations: <span id="conversations-user-name"></span></h2>
-            
-            <div id="conversations-list" class="modal-large-content">
-                <p style="text-align: center; padding: 2rem;">Loading conversations...</p>
+        <div class="modal-content modal-large-content">
+            <div class="modal-header">
+                <h2>Conversations - <span id="conversations-user-name"></span></h2>
+                <button id="close-conversations-btn" class="btn btn-icon">×</button>
             </div>
             
-            <div class="modal-actions">
-                <button id="close-conversations-btn" class="btn btn-secondary">
-                    Close
-                </button>
-            </div>
+            <div id="conversations-list"></div>
         </div>
     </div>
 
-    <!-- Report Preview Modal -->
+    <!-- REPORT PREVIEW MODAL -->
     <div id="report-preview-modal" class="modal hidden">
-        <div class="modal-content modal-large">
-            <h2 id="report-preview-title">Report Generated</h2>
-            
-            <div class="modal-large-content">
-                <div id="report-preview-content" class="report-preview"></div>
+        <div class="modal-content modal-large-content">
+            <div class="modal-header">
+                <h2 id="report-preview-title">Report Preview</h2>
+                <button id="close-report-btn" class="btn btn-icon">×</button>
             </div>
+            
+            <div id="report-preview-content" class="report-preview"></div>
             
             <div class="modal-actions">
                 <button id="download-report-btn" class="btn btn-primary">
-                    Download Report
-                </button>
-                <button id="close-report-btn" class="btn btn-secondary">
-                    Close
+                    📥 Download Report
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- User Credentials Modal (shown after creating user) -->
+    <!-- USER CREDENTIALS MODAL -->
     <div id="user-credentials-modal" class="modal hidden">
         <div class="modal-content">
             <h2>✅ User Created Successfully</h2>
-            <p>Share these credentials with the employee:</p>
+            <p style="margin-bottom: 1.5rem;">Share these credentials with the new user:</p>
             
-            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 4px; margin: 1rem 0;">
-                <p style="margin-bottom: 0.5rem;"><strong>Website:</strong> <span id="cred-website"></span></p>
-                <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> <span id="cred-email"></span></p>
-                <p style="margin-bottom: 0;"><strong>Temporary Password:</strong> <span id="cred-password"></span></p>
+            <div class="form-group">
+                <label>Website</label>
+                <input type="text" id="cred-website" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label>Email</label>
+                <input type="text" id="cred-email" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label>Temporary Password</label>
+                <input type="text" id="cred-password" readonly>
             </div>
             
             <p style="color: var(--text-secondary); font-size: 0.875rem;">
-                ℹ️ The user will be required to create a new password on first login.
+                The user will be prompted to create a new password on first login.
             </p>
             
             <div class="modal-actions">
@@ -588,6 +566,116 @@
         </div>
     </div>
 
+    <!-- VOICE MANAGEMENT MODALS -->
+    <!-- Voice Management Modal -->
+    <div id="voice-modal" class="modal hidden">
+        <div class="modal-content voice-modal-content">
+            <div class="voice-modal-header">
+                <h2 class="voice-modal-title">🎤 Voice Configuration</h2>
+                <button id="close-voice-modal-btn" class="btn btn-icon" aria-label="Close">×</button>
+            </div>
+            
+            <div id="voice-status-message" class="status-message hidden"></div>
+            
+            <div class="voice-controls">
+                <div class="voice-controls-row">
+                    <div class="form-group-voice">
+                        <label for="default-voice-select">Default Voice</label>
+                        <select id="default-voice-select">
+                            <option value="">Select default voice...</option>
+                        </select>
+                    </div>
+                    <div class="voice-action-buttons">
+                        <button id="add-voice-btn" class="btn btn-primary">
+                            ➕ Add Voice
+                        </button>
+                        <button id="browse-api-voices-btn" class="btn btn-secondary">
+                            🔍 Browse Eleven Labs
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="voices-list" class="voices-list"></div>
+            
+            <div class="modal-actions">
+                <button id="save-voice-config-btn" class="btn btn-primary">
+                    💾 Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Form Modal -->
+    <div id="voice-form-modal" class="modal hidden">
+        <div class="modal-content voice-form-modal">
+            <h2 id="voice-form-title">Add New Voice</h2>
+            
+            <form id="voice-form">
+                <div class="voice-form-group">
+                    <label for="voice-id-input">
+                        Voice ID <span style="color: var(--danger-color);">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="voice-id-input" 
+                        required
+                        placeholder="e.g., 21m00Tcm4TlvDq8ikWAM"
+                    >
+                    <small>The Eleven Labs voice ID</small>
+                </div>
+                
+                <div class="voice-form-group">
+                    <label for="voice-name-input">
+                        Voice Name <span style="color: var(--danger-color);">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="voice-name-input" 
+                        required
+                        placeholder="e.g., Professional Male"
+                    >
+                    <small>A friendly name users will see</small>
+                </div>
+                
+                <div class="voice-form-group">
+                    <label for="voice-desc-input">Description</label>
+                    <textarea 
+                        id="voice-desc-input"
+                        placeholder="e.g., Clear, authoritative voice"
+                    ></textarea>
+                    <small>Help users understand when to use this voice</small>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" id="cancel-voice-form-btn" class="btn btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Save Voice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- API Voices Browser Modal -->
+    <div id="api-voices-modal" class="modal hidden api-voices-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Browse Eleven Labs Voices</h2>
+                <button id="close-api-voices-btn" class="btn btn-icon" aria-label="Close">×</button>
+            </div>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Select a voice from your Eleven Labs library to add to TIIS.
+            </p>
+            
+            <div id="api-voices-list" class="api-voices-list"></div>
+        </div>
+    </div>
+
+    <script src="admin-voice-manager.js"></script>
     <script src="admin-dashboard.js"></script>
 </body>
 </html>

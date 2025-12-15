@@ -387,6 +387,17 @@ function renderMessage(message) {
     
     messageDiv.appendChild(bubbleDiv);
     elements.messagesContainer.appendChild(messageDiv);
+    
+    // Add voice playback button to bot messages
+    if (message.role === 'assistant' && window.userVoiceInterface) {
+        const textContent = Array.isArray(message.content) 
+            ? message.content.find(c => c.type === 'text')?.text 
+            : message.content;
+        
+        if (textContent) {
+            window.userVoiceInterface.addPlaybackButton(messageDiv, textContent);
+        }
+    }
 }
 
 // Send message

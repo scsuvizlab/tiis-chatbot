@@ -1,4 +1,4 @@
-// TIIS Admin Dashboard - Full Implementation
+// TIIS Admin Dashboard - Full Implementation with Voice Manager
 const API_BASE = '/api';
 
 // Global state
@@ -8,6 +8,7 @@ let stats = null;
 let currentReportData = null;
 let currentReportFilename = null;
 let selectedUserForAction = null;
+let voiceManager = null; // Voice manager instance
 
 // DOM Elements - will be set after DOM loads
 let elements = {};
@@ -166,6 +167,12 @@ function showLoginScreen() {
 function showDashboard() {
     elements.loginScreen.classList.add('hidden');
     elements.dashboard.classList.remove('hidden');
+    
+    // Initialize voice manager
+    if (!voiceManager) {
+        voiceManager = new AdminVoiceManager(adminToken);
+    }
+    
     loadDashboardData();
 }
 
@@ -203,6 +210,7 @@ async function handleLogin(e) {
 
 function handleLogout() {
     adminToken = null;
+    voiceManager = null;
     localStorage.removeItem('admin_token');
     showLoginScreen();
 }
@@ -323,14 +331,14 @@ function renderUsersTable() {
     });
 }
 
-// Populate user selector dropdowns
+// Populate user selectors in report section
 function populateUserSelectors() {
-    elements.individualReportUser.innerHTML = '<option value="">Select employee...</option>';
+    elements.individualReportUser.innerHTML = '<option value="">Select a user...</option>';
     
     users.forEach(user => {
         const option = document.createElement('option');
         option.value = user.email;
-        option.textContent = `${user.name} (${user.role})`;
+        option.textContent = `${user.name} (${user.email})`;
         elements.individualReportUser.appendChild(option);
     });
 }
@@ -343,7 +351,6 @@ function showCreateUserModal() {
     elements.createUserModal.classList.remove('hidden');
     elements.createUserForm.reset();
     elements.createUserError.classList.add('hidden');
-    elements.newUserEmail.focus();
 }
 
 function hideCreateUserModal() {
@@ -353,55 +360,44 @@ function hideCreateUserModal() {
 async function handleCreateUser(e) {
     e.preventDefault();
     
-    const email = elements.newUserEmail.value.trim();
-    const name = elements.newUserName.value.trim();
-    const role = elements.newUserRole.value.trim();
-    const tempPassword = elements.newUserPassword.value;
+    const email = elements.newUserEmail.value;
+    const name = elements.newUserName.value;
+    const role = elements.newUserRole.value;
+    const temp_password = elements.newUserPassword.value;
     
     try {
+        // CORRECTED ENDPOINT URL
         const response = await fetch(`${API_BASE}/admin/users/create`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                email,
-                name,
-                role,
-                temp_password: tempPassword
-            })
+            body: JSON.stringify({ email, name, role, temp_password })
         });
         
         if (!response.ok) {
             const data = await response.json();
-            elements.createUserError.textContent = data.error || 'Failed to create user';
-            elements.createUserError.classList.remove('hidden');
-            return;
+            throw new Error(data.error || 'Failed to create user');
         }
         
         const data = await response.json();
         
-        // Hide create modal
         hideCreateUserModal();
-        
-        // Show credentials modal
-        showCredentialsModal(email, name, tempPassword);
-        
-        // Reload dashboard
-        await loadDashboardData();
+        showCredentialsModal(email, temp_password);
+        loadDashboardData();
         
     } catch (error) {
         console.error('Error creating user:', error);
-        elements.createUserError.textContent = 'Connection error';
+        elements.createUserError.textContent = error.message;
         elements.createUserError.classList.remove('hidden');
     }
 }
 
-function showCredentialsModal(email, name, password) {
-    elements.credWebsite.textContent = window.location.origin;
-    elements.credEmail.textContent = email;
-    elements.credPassword.textContent = password;
+function showCredentialsModal(email, password) {
+    elements.credWebsite.value = window.location.origin;
+    elements.credEmail.value = email;
+    elements.credPassword.value = password;
     elements.userCredentialsModal.classList.remove('hidden');
 }
 
@@ -410,19 +406,15 @@ function hideCredentialsModal() {
 }
 
 function handleCopyCredentials() {
-    const text = `TIIS Login Credentials
-Website: ${elements.credWebsite.textContent}
-Email: ${elements.credEmail.textContent}
-Temporary Password: ${elements.credPassword.textContent}
-
-The user will be required to create a new password on first login.`;
+    const text = `Website: ${elements.credWebsite.value}\nEmail: ${elements.credEmail.value}\nPassword: ${elements.credPassword.value}`;
+    navigator.clipboard.writeText(text);
     
-    navigator.clipboard.writeText(text).then(() => {
-        elements.copyCredentialsBtn.textContent = '✓ Copied!';
-        setTimeout(() => {
-            elements.copyCredentialsBtn.textContent = 'Copy to Clipboard';
-        }, 2000);
-    });
+    const btn = elements.copyCredentialsBtn;
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => {
+        btn.textContent = originalText;
+    }, 2000);
 }
 
 // ============================================
@@ -430,12 +422,11 @@ The user will be required to create a new password on first login.`;
 // ============================================
 
 function showResetPasswordModal(email, name) {
-    selectedUserForAction = { email, name };
-    elements.resetUserName.textContent = name;
+    selectedUserForAction = email;
+    elements.resetUserName.textContent = `Reset password for ${name}`;
     elements.resetPasswordModal.classList.remove('hidden');
     elements.resetPasswordForm.reset();
     elements.resetPasswordError.classList.add('hidden');
-    elements.resetNewPassword.focus();
 }
 
 function hideResetPasswordModal() {
@@ -446,13 +437,35 @@ function hideResetPasswordModal() {
 async function handleResetPassword(e) {
     e.preventDefault();
     
-    const newPassword = elements.resetNewPassword.value;
+    const new_password = elements.resetNewPassword.value;
     
-    // This would require a new endpoint on the backend
-    // For now, we'll show a not implemented message
-    alert(`Password reset functionality requires backend implementation.\n\nNew password for ${selectedUserForAction.name}: ${newPassword}\n\nTo implement: Add POST /api/admin/users/reset-password endpoint`);
-    
-    hideResetPasswordModal();
+    try {
+        // CORRECTED ENDPOINT URL
+        const response = await fetch(`${API_BASE}/admin/users/reset-password`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                email: selectedUserForAction, 
+                new_password
+            })
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to reset password');
+        }
+        
+        hideResetPasswordModal();
+        alert('Password reset successfully');
+        
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        elements.resetPasswordError.textContent = error.message;
+        elements.resetPasswordError.classList.remove('hidden');
+    }
 }
 
 // ============================================
@@ -460,7 +473,7 @@ async function handleResetPassword(e) {
 // ============================================
 
 function showDeleteUserModal(email, name) {
-    selectedUserForAction = { email, name };
+    selectedUserForAction = email;
     elements.deleteUserName.textContent = name;
     elements.deleteUserModal.classList.remove('hidden');
 }
@@ -471,11 +484,27 @@ function hideDeleteUserModal() {
 }
 
 async function handleDeleteUser() {
-    // This would require a new endpoint on the backend
-    // For now, we'll show a not implemented message
-    alert(`Delete user functionality requires backend implementation.\n\nTo implement: Add DELETE /api/admin/users/:email endpoint`);
-    
-    hideDeleteUserModal();
+    try {
+        // CORRECTED ENDPOINT URL
+        const response = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(selectedUserForAction)}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to delete user');
+        }
+        
+        hideDeleteUserModal();
+        loadDashboardData();
+        
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Failed to delete user: ' + error.message);
+    }
 }
 
 // ============================================
@@ -484,11 +513,11 @@ async function handleDeleteUser() {
 
 async function handleViewConversations(email, name) {
     elements.conversationsUserName.textContent = name;
+    elements.conversationsList.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading...</p>';
     elements.viewConversationsModal.classList.remove('hidden');
-    elements.conversationsList.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading conversations...</p>';
     
     try {
-        const response = await fetch(`${API_BASE}/admin/conversations/${email}`, {
+        const response = await fetch(`${API_BASE}/admin/conversations/${encodeURIComponent(email)}`, {
             headers: {
                 'Authorization': `Bearer ${adminToken}`
             }
@@ -499,7 +528,28 @@ async function handleViewConversations(email, name) {
         }
         
         const data = await response.json();
-        renderConversationsList(data.conversations);
+        
+        if (data.conversations.length === 0) {
+            elements.conversationsList.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-secondary);">No conversations yet.</p>';
+            return;
+        }
+        
+        elements.conversationsList.innerHTML = '';
+        
+        data.conversations.forEach(conv => {
+            const div = document.createElement('div');
+            div.className = 'conversation-item-admin';
+            
+            const status = conv.status === 'complete' ? '✓' : '⋯';
+            const messageCount = conv.message_count || 0;
+            
+            div.innerHTML = `
+                <h4>${status} ${conv.title}</h4>
+                <p>${messageCount} messages • Updated ${getTimeAgo(conv.updated_at)}</p>
+            `;
+            
+            elements.conversationsList.appendChild(div);
+        });
         
     } catch (error) {
         console.error('Error loading conversations:', error);
@@ -507,42 +557,12 @@ async function handleViewConversations(email, name) {
     }
 }
 
-function renderConversationsList(conversations) {
-    if (conversations.length === 0) {
-        elements.conversationsList.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-secondary);">No conversations yet</p>';
-        return;
-    }
-    
-    elements.conversationsList.innerHTML = '';
-    
-    conversations.forEach(conv => {
-        const item = document.createElement('div');
-        item.className = 'conversation-item-admin';
-        
-        const title = conv.type === 'onboarding' ? 'Onboarding' : conv.title;
-        const icon = conv.type === 'onboarding' ? '🎯' : '📋';
-        const status = conv.status === 'complete' ? 'Complete' : 'In Progress';
-        const lastUpdated = new Date(conv.last_updated).toLocaleString();
-        
-        item.innerHTML = `
-            <h4>${icon} ${title}</h4>
-            <p>
-                Status: ${status} • 
-                ${conv.messages?.length || 0} messages • 
-                Updated: ${lastUpdated}
-            </p>
-        `;
-        
-        elements.conversationsList.appendChild(item);
-    });
-}
-
 function hideConversationsModal() {
     elements.viewConversationsModal.classList.add('hidden');
 }
 
 // ============================================
-// GENERATE REPORTS
+// REPORTS
 // ============================================
 
 async function handleGenerateCorpReport() {
@@ -564,16 +584,16 @@ async function handleGenerateCorpReport() {
         
         const data = await response.json();
         currentReportData = data.analysis;
-        currentReportFilename = `GSCDC_Corporation_Report_${new Date().toISOString().split('T')[0]}.md`;
+        currentReportFilename = `Corporation_Report_${new Date().toISOString().split('T')[0]}.md`;
         
-        showReportModal('Corporation-Wide Analysis Report', data.analysis);
+        showReportModal('Corporation-Wide Analysis', data.analysis);
         
     } catch (error) {
         console.error('Error generating report:', error);
         alert('Failed to generate report: ' + error.message);
     } finally {
         elements.generateCorpReportBtn.disabled = false;
-        elements.generateCorpReportBtn.textContent = 'Generate Corporation Report';
+        elements.generateCorpReportBtn.textContent = '🏢 Generate Corporation Report';
     }
 }
 
@@ -581,7 +601,7 @@ async function handleGenerateIndividualReport() {
     const email = elements.individualReportUser.value;
     
     if (!email) {
-        alert('Please select an employee');
+        alert('Please select a user');
         return;
     }
     
@@ -614,7 +634,7 @@ async function handleGenerateIndividualReport() {
         alert('Failed to generate report: ' + error.message);
     } finally {
         elements.generateIndividualReportBtn.disabled = false;
-        elements.generateIndividualReportBtn.textContent = 'Generate Individual Report';
+        elements.generateIndividualReportBtn.textContent = '👤 Generate Individual Report';
     }
 }
 

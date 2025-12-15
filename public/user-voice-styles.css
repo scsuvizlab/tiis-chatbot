@@ -1,0 +1,341 @@
+/* ============================================
+   USER VOICE INTERFACE STYLES
+   ============================================ */
+
+/* Voice Control Buttons */
+.voice-record-btn,
+.voice-settings-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1.25rem;
+}
+
+.voice-record-btn:hover,
+.voice-settings-btn:hover {
+    background: var(--bg-hover);
+    transform: scale(1.05);
+}
+
+.voice-record-btn.recording-active {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #ef4444;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Recording UI */
+.recording-ui {
+    background: linear-gradient(135deg, #fee2e2 0%, #fef3c7 100%);
+    border: 2px solid #ef4444;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.recording-ui.hidden {
+    display: none;
+}
+
+.recording-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.recording-status {
+    font-weight: 600;
+    color: #991b1b;
+    font-size: 0.9375rem;
+}
+
+.recording-timer {
+    font-family: 'Courier New', monospace;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #991b1b;
+}
+
+.recording-progress {
+    background: rgba(255, 255, 255, 0.5);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.recording-progress-bar {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+    height: 100%;
+    width: 0%;
+    transition: width 0.1s linear;
+    border-radius: 4px;
+}
+
+.recording-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.recording-actions button {
+    flex: 1;
+    max-width: 150px;
+}
+
+/* Voice Playback Button (on messages) */
+.voice-playback-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.375rem 0.625rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+    transition: all 0.2s;
+}
+
+.voice-playback-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.voice-playback-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Voice Settings Modal */
+#voice-settings-modal .modal-content {
+    max-width: 500px;
+}
+
+.voice-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    background: var(--bg-primary);
+    margin-bottom: 1rem;
+}
+
+.voice-preview {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.voice-preview button {
+    min-width: 150px;
+}
+
+/* Message Integration */
+.message-content {
+    position: relative;
+}
+
+.bot-message .message-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.bot-message .voice-playback-btn {
+    align-self: flex-start;
+}
+
+/* Input Row Modifications */
+.input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.input-row #user-input {
+    flex: 1;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .voice-record-btn,
+    .voice-settings-btn {
+        padding: 0.625rem;
+        font-size: 1.125rem;
+    }
+    
+    .recording-ui {
+        padding: 0.75rem;
+    }
+    
+    .recording-status {
+        font-size: 0.875rem;
+    }
+    
+    .recording-timer {
+        font-size: 1rem;
+    }
+    
+    .recording-actions {
+        flex-direction: column;
+    }
+    
+    .recording-actions button {
+        max-width: none;
+        width: 100%;
+    }
+    
+    .voice-playback-btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.5rem;
+    }
+}
+
+/* Accessibility */
+.voice-record-btn:focus,
+.voice-settings-btn:focus,
+.voice-playback-btn:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Loading States */
+.voice-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Error States */
+.voice-error {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #991b1b;
+}
+
+/* Success States */
+.voice-success {
+    background: #d1fae5;
+    border-color: #10b981;
+    color: #065f46;
+}
+
+/* Transcription Display */
+.transcription-preview {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.transcription-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.transcription-preview-text {
+    color: var(--text-primary);
+}
+
+/* Voice Settings Form */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.recording-ui {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Waveform Visualization (optional enhancement) */
+.recording-waveform {
+    height: 40px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    margin: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.waveform-bar {
+    width: 3px;
+    background: #ef4444;
+    margin: 0 1px;
+    border-radius: 2px;
+    animation: wave 1s ease-in-out infinite;
+}
+
+@keyframes wave {
+    0%, 100% {
+        height: 10%;
+    }
+    50% {
+        height: 80%;
+    }
+}
+
+.waveform-bar:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.waveform-bar:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.waveform-bar:nth-child(4) {
+    animation-delay: 0.3s;
+}
+
+.waveform-bar:nth-child(5) {
+    animation-delay: 0.4s;
+}
