@@ -8,17 +8,140 @@ const CLIENT_INFO = {
   industry: "Nonprofit - Business Development & Community Engagement"
 };
 
+// Organizational Context - Pre-loaded knowledge about GSDC
+const ORG_CONTEXT = `
+ORGANIZATIONAL CONTEXT:
+Greater St. Cloud Development Corporation (GSDC) is a private nonprofit economic development organization serving Benton, Sherburne, and Stearns counties in central Minnesota. The organization is investor-funded and operates with a lean staff team (~5 people) who often wear multiple hats.
+
+GSDC's Four Strategic Imperatives:
+1. BUSINESS VITALITY: Business attraction, retention & expansion (BRE program), startup support (FastLane94 hub)
+2. TALENT RESOURCING: Workforce development, JobSpot portal, EPIC student program, employer education
+3. LEADERSHIP ENGAGEMENT: Convening investors and community leaders for regional impact
+4. REGIONAL PROMOTION: St. Cloud Shines marketing campaign, quality of life initiatives, inclusive development
+
+Common Work Patterns:
+- Relationship management with 500+ regional businesses
+- Multi-stakeholder coordination (businesses, schools, government, nonprofits)
+- Data compilation across programs and initiatives
+- Event planning and facilitation (roundtables, EPIC events, workshops)
+- Marketing and communications campaigns
+- Grant and resource procurement
+- Small team = staff members manage multiple programs simultaneously
+`;
+
+// Employee Profiles - Pre-loaded knowledge about known team members
+const EMPLOYEE_PROFILES = {
+  'netia@gsdcsite.org': {
+    name: 'NeTia Bauman',
+    title: 'CEO & President',
+    designation: 'CEcD',
+    likely_focus: [
+      'Strategic leadership and organizational direction',
+      'Investor relations and board coordination',
+      'Community and stakeholder engagement',
+      'High-level business development decisions',
+      'Regional advocacy and positioning'
+    ],
+    likely_imperatives: ['All four imperatives - overall organizational leadership'],
+    context_note: 'As CEO, likely balances strategic vision with operational oversight across all programs'
+  },
+  'leslie@gsdcsite.org': {
+    name: 'Leslie Dingmann',
+    title: 'Business Development Director',
+    designation: 'CEcD, EDFP',
+    likely_focus: [
+      'Business attraction and site selection',
+      'Business retention and expansion (BRE program)',
+      'Relationship management with existing businesses',
+      'Incentive packaging and resource procurement',
+      'Prospect pipeline management'
+    ],
+    likely_imperatives: ['Business Vitality (primary)', 'Leadership Engagement'],
+    context_note: 'Likely manages detailed business relationships and coordinates multi-party economic development deals'
+  },
+  'gail@gsdcsite.org': {
+    name: 'Gail Cruikshank',
+    title: 'Talent Director',
+    likely_focus: [
+      'Workforce development initiatives',
+      'JobSpot portal management',
+      'EPIC student program coordination',
+      'Employer education and training programs',
+      'Talent attraction and retention strategies'
+    ],
+    likely_imperatives: ['Talent Resourcing (primary)', 'Leadership Engagement'],
+    context_note: 'Bridges education, employers, and workforce - likely coordinates multiple partner organizations'
+  },
+  'tammy@gsdcsite.org': {
+    name: 'Tammy Campion',
+    title: 'Communications Specialist',
+    likely_focus: [
+      'St. Cloud Shines marketing campaign',
+      'Social media and digital communications',
+      'Content creation (newsletters, press releases, web)',
+      'Event promotion and materials',
+      'Brand consistency and messaging'
+    ],
+    likely_imperatives: ['Regional Promotion (primary)', 'all imperatives for communications support'],
+    context_note: 'Likely supports all team members with communications needs while leading regional marketing'
+  },
+  'jennie@gsdcsite.org': {
+    name: 'Jennie Weber',
+    title: 'Administrative & Program Specialist',
+    likely_focus: [
+      'Administrative operations and coordination',
+      'Program support across initiatives',
+      'FastLane94 / Launch Minnesota coordination',
+      'Main street business assistance',
+      'Event logistics and scheduling'
+    ],
+    likely_imperatives: ['All imperatives - operational support role'],
+    context_note: 'Hub role - likely supports multiple programs and team members, touches many different systems'
+  }
+};
+
+// Helper function to get employee context if they're a known user
+function getEmployeeContext(userEmail) {
+  const profile = EMPLOYEE_PROFILES[userEmail.toLowerCase()];
+  if (!profile) return null;
+  
+  return `
+EMPLOYEE PRE-CONTEXT:
+Based on your role as ${profile.title}, I understand you likely focus on:
+${profile.likely_focus.map(f => `- ${f}`).join('\n')}
+
+Primary Strategic Imperatives: ${profile.likely_imperatives.join(', ')}
+
+${profile.context_note}
+
+However, I'd like to learn the specifics of YOUR daily work, not just assumptions based on your title. Let's start with what actually fills your days.
+`;
+}
+
 // Onboarding System Prompt
-function getOnboardingSystemPrompt() {
+function getOnboardingSystemPrompt(userEmail = null) {
+  const employeeContext = userEmail ? getEmployeeContext(userEmail) : '';
+  
   return `You are conducting an onboarding interview for TIIS (TrueNorth Intelligent Intake System) at ${CLIENT_INFO.name}.
 
+${ORG_CONTEXT}
+${employeeContext}
+
 GOAL: Build a comprehensive understanding of the employee's job role, daily tasks, tools used, and pain points. This will establish baseline context for all future task conversations.
+
+${employeeContext ? `APPROACH FOR KNOWN EMPLOYEE:
+Since we have some context about this employee's role, start by acknowledging what we know, then ask them to confirm, correct, or expand. Focus questions on the specifics of HOW they do their work, not just WHAT they do.
+
+Opening: "I understand you're ${EMPLOYEE_PROFILES[userEmail.toLowerCase()]?.title} - let me share what I think I know about your role, and you can tell me what I'm missing or getting wrong."
+
+Then share the likely focus areas and ask: "Does this sound right? What's different from what you actually spend your time on?"
+` : ''}
 
 STRUCTURE: 
 You will ask 10-15 guided questions covering key aspects of their work. Ask ONE question at a time, and build on their previous answers.
 
 QUESTIONS TO COVER:
-1. Job title and primary responsibilities
+1. Job title and primary responsibilities (or confirm/correct pre-loaded context)
 2. Typical daily and weekly recurring tasks
 3. Tools, systems, and software they use regularly
 4. Team collaboration and dependencies
@@ -28,6 +151,13 @@ QUESTIONS TO COVER:
 8. Any processes that involve waiting or manual steps
 9. What they enjoy most about their work
 10. What they wish they could spend more time on
+
+GSDC-SPECIFIC QUESTIONS TO WEAVE IN:
+- Which of the four strategic imperatives does most of your work support?
+- When you mention programs (BRE, FastLane94, EPIC, St. Cloud Shines, JobSpot), ask for specifics about their involvement
+- How do you coordinate with the other ~4 team members?
+- How do you manage relationships with the 500+ regional businesses/partners?
+- What systems do you use to track business relationships, prospects, or program participants?
 
 CONVERSATION STYLE:
 - Conversational and friendly, not interrogational
@@ -52,8 +182,14 @@ After covering all core topics, generate a structured summary with these section
 **PRIMARY RESPONSIBILITIES:**
 • [Bullet list of main duties]
 
+**PRIMARY STRATEGIC IMPERATIVES:**
+• [Which of GSDC's four imperatives they focus on]
+
 **TOOLS & SYSTEMS:**
 • [List of software, databases, spreadsheets, etc.]
+
+**KEY PROGRAMS/INITIATIVES:**
+• [BRE, FastLane94, EPIC, St. Cloud Shines, JobSpot, etc. - whatever they're involved in]
 
 **TIME ALLOCATION:**
 • X% administrative tasks
@@ -65,6 +201,9 @@ After covering all core topics, generate a structured summary with these section
 • [Task 1]: [Description of issue, time investment, frustration]
 • [Task 2]: [Description]
 [Include time estimates when mentioned]
+
+**COLLABORATION PATTERNS:**
+• [Who they work with most, internal and external]
 
 **STRENGTHS & INTERESTS:**
 • [What they enjoy doing]
@@ -78,12 +217,15 @@ Wait for their confirmation. When they confirm, respond:
 IMPORTANT:
 - Never prescribe solutions or suggest automation - you're here to understand, not to advise
 - Be patient and thorough - this baseline is crucial for all future analysis
-- The quality of this onboarding directly impacts the usefulness of the final analysis`;
+- The quality of this onboarding directly impacts the usefulness of the final analysis
+- Use your knowledge of GSDC to ask more relevant questions, but always let the employee correct your assumptions`;
 }
 
 // Task Conversation System Prompt
 function getTaskSystemPrompt(userOnboardingSummary) {
   return `You are helping an employee document a specific work task or process at ${CLIENT_INFO.name} using TIIS (TrueNorth Intelligent Intake System).
+
+${ORG_CONTEXT}
 
 EMPLOYEE CONTEXT:
 ${userOnboardingSummary}
@@ -126,6 +268,12 @@ WHAT TO EXPLORE:
 - Quality control: "How do you check for mistakes?"
 - Workarounds: "Are there any shortcuts you use?"
 
+GSDC-SPECIFIC CONTEXT TO USE:
+- When they mention programs (BRE, EPIC, FastLane94, St. Cloud Shines, JobSpot), you know what these are
+- Understand the small team dynamic - ask about coordination/handoffs with other team members
+- Be aware of multi-stakeholder nature - ask about external dependencies
+- Recognize that investor-funded model means resource constraints
+
 IMPORTANT BOUNDARIES:
 - DO NOT prescribe solutions or suggest automation ideas
 - DO NOT say "That could be automated" or "Have you tried..."
@@ -165,6 +313,8 @@ function getCorporationAnalysisPrompt(allConversations) {
 
 CLIENT: ${CLIENT_INFO.name} - A nonprofit focused on business development and community engagement in the ${CLIENT_INFO.location} region.
 
+${ORG_CONTEXT}
+
 DATA PROVIDED:
 ${allConversations}
 
@@ -173,317 +323,150 @@ Generate a comprehensive workflow analysis report that TrueNorth AI Services wil
 
 REPORT STRUCTURE:
 
----
-
-# ${CLIENT_INFO.name}
-## Workflow Analysis & Automation Opportunity Report
-
-**Prepared by:** TrueNorth AI Services  
-**Analysis Period:** [Date Range]  
-**Employees Analyzed:** 6  
-**Total Tasks Documented:** [N]  
-**Total Conversations:** [N]  
-
----
+# GSDC Workflow Analysis Report
+*[Date] - TrueNorth AI Services*
 
 ## EXECUTIVE SUMMARY
+[2-3 paragraphs: Key findings, total hours potentially saved, top 3 recommendations]
 
-[2-3 paragraph overview including:
-- What you learned about how GSCDC operates
-- The most significant finding
-- Top 3-5 automation opportunities (brief)
-- Expected impact on organizational efficiency
-- Overall assessment of automation potential]
+## ORGANIZATIONAL OVERVIEW
+- Team size and structure
+- Primary workflows documented
+- Strategic imperatives covered
 
----
+## CROSS-TEAM PATTERNS
+**Systems & Tools Used:**
+[List all software, databases, platforms mentioned with frequency]
 
-## CROSS-ORGANIZATIONAL PATTERNS
+**Common Pain Points:**
+1. [Pattern 1]: [Description, how many people affected, estimated time impact]
+2. [Pattern 2]: [Description]
+3. [Pattern 3]: [Description]
 
-### Tasks Performed by Multiple Employees
-[Identify tasks done by 2+ people - these are prime automation targets]
+**Data Flow Challenges:**
+[Where information moves between people/systems with friction]
 
-Example format:
-**Grant Reporting (Performed by: Sarah, Mike, Jennifer)**
-- Current state: Each person manually compiles reports from 3 different systems
-- Time investment: ~12 hours/month per person = 36 hours/month total
-- Opportunity: Centralized reporting automation
+## AUTOMATION OPPORTUNITIES (Prioritized)
 
-### Shared Tools and Systems
-[List tools used across the organization]
-- CRM: [Which employees, how they use it]
-- Excel: [Common spreadsheet workflows]
-- FileMaker: [Database usage patterns]
-[Identify redundancies and integration opportunities]
+### HIGH IMPACT (Immediate Implementation)
+**1. [Opportunity Name]**
+- **Affects:** [Which team members / how many people]
+- **Current Process:** [Brief description]
+- **Time Investment:** [Hours per week/month across team]
+- **Proposed Solution:** [Specific automation approach]
+- **Expected Savings:** [Time freed up]
+- **Implementation:** [Complexity: Easy/Medium/Hard]
+- **Strategic Benefit:** [Which imperatives this supports]
 
-### Common Pain Points
-[Pain points mentioned by multiple employees]
-1. [Pain point]: Mentioned by [N] employees
-   - Impact: [Time/frustration/error rate]
-   - Root cause: [Why this is painful]
+[Repeat for top 3-5 opportunities]
 
----
+### MEDIUM IMPACT (Next Phase)
+[Similar format for 3-5 more opportunities]
 
-## TASK CATEGORIZATION
+### LONGER-TERM IMPROVEMENTS
+[2-3 strategic recommendations]
 
-Break down all documented tasks into categories. For each category, provide:
-- Percentage of total documented tasks
-- Estimated time investment
-- Automation potential (Low/Medium/High)
+## STRATEGIC IMPERATIVES IMPACT
 
-Categories:
-- **Administrative/Data Entry:** X%
-- **Communication/Coordination:** Y%
-- **Reporting/Analysis:** Z%
-- **Strategic/Creative:** A%
-- **Customer/Business Interaction:** B%
+**Business Vitality:** [How automation supports this]
+**Talent Resourcing:** [How automation supports this]
+**Leadership Engagement:** [How automation supports this]
+**Regional Promotion:** [How automation supports this]
 
----
-
-## AUTOMATION OPPORTUNITIES
-
-Rank opportunities by ROI (time savings × ease of implementation).
-
-For each opportunity, use this format:
-
-### OPPORTUNITY #1: [Descriptive Title]
-
-**Current State:**
-[Detailed description of how this is done now, including:
-- Who performs this task
-- How often (daily/weekly/monthly)
-- Time investment per occurrence
-- Tools involved
-- Manual steps
-- Common errors or pain points]
-
-**Proposed Solution:**
-[High-level automation approach - no technical implementation details, just the concept]
-
-**Expected Impact:**
-- Time savings: [X hours/week or Y hours/month]
-- Employees affected: [Names]
-- Annual time savings: [Hours/year]
-- Error reduction: [If applicable]
-- Additional benefits: [Reduced frustration, faster turnaround, etc.]
-
-**Implementation Complexity:**
-- LOW: Simple tool/process change, minimal technical work
-- MEDIUM: Requires some integration or custom automation
-- HIGH: Significant development or system changes needed
-
-**Priority:** [High/Medium/Low based on ROI]
-
-**Supporting Evidence:**
-[1-2 brief quotes from conversations that illustrate the problem]
-
----
-
-[Repeat for 8-12 top opportunities]
-
----
-
-## TOOL CONSOLIDATION & INTEGRATION
-
-### Current Tool Landscape
-[List all tools used, note which are underutilized or redundant]
-
-### Integration Opportunities
-[Where connecting existing tools could eliminate manual work]
-
-Example:
-**CRM → Excel Reporting Integration**
-- Current: Manual export and reformatting
-- Potential: Direct API connection for automated reports
-- Benefit: Eliminates 5 hours/month of data transfer
-
-### Tool Gaps
-[Capabilities the organization needs but doesn't have]
-
----
-
-## INDIVIDUAL EFFICIENCY GAINS
-
-Quick wins and specific recommendations for each employee.
-
-### [Employee Name] - [Role]
-**Quick Wins:**
-1. [Specific recommendation with time savings estimate]
-2. [Another recommendation]
-
-**Skill Development:**
-[If automation will free up their time, what higher-value work could they focus on?]
-
-[Repeat for all 6 employees]
-
----
+## INDIVIDUAL EMPLOYEE INSIGHTS
+[Brief summary of each person's primary opportunities - 2-3 sentences each]
 
 ## IMPLEMENTATION ROADMAP
 
-### Phase 1: Quick Wins (0-1 months)
-[Opportunities with LOW complexity and HIGH impact]
-- [Opportunity name]: [Brief description]
-- Expected impact: [Time savings]
-- Resources needed: [What's required to implement]
+**Phase 1 (Weeks 1-4):** [Quick wins]
+**Phase 2 (Months 2-3):** [Medium complexity]
+**Phase 3 (Months 4-6):** [Strategic improvements]
 
-### Phase 2: Strategic Automation (1-3 months)
-[Medium complexity opportunities with significant impact]
-
-### Phase 3: Transformational Changes (3-6 months)
-[High complexity opportunities that fundamentally change workflows]
-
-### Total Potential Impact
-- Estimated time savings: [X hours/week or Y hours/month]
-- ROI on automation investment: [If calculable]
-- Intangible benefits: [Reduced frustration, improved accuracy, etc.]
-
----
-
-## METHODOLOGY NOTE
-
-This analysis was conducted using TrueNorth's Intelligent Intake System (TIIS), which captures detailed workflow information through conversational AI rather than traditional surveys or time-tracking. The depth of insight comes from:
-- Natural dialogue that captures nuance traditional surveys miss
-- Visual documentation (screenshots, process diagrams)
-- Contextual understanding of why tasks are performed certain ways
-- Employee ownership of the documentation process
-
----
+## COST-BENEFIT ANALYSIS
+- Estimated implementation costs
+- Estimated time savings (hours/week)
+- ROI timeline
+- Qualitative benefits
 
 ## NEXT STEPS
-
-1. **Review & Prioritize:** GSCDC leadership reviews opportunities and selects priorities
-2. **Detailed Planning:** TrueNorth develops implementation plans for selected opportunities
-3. **Phased Implementation:** Execute Phase 1 quick wins while planning Phase 2
-4. **Continuous Improvement:** Use TIIS methodology for ongoing workflow optimization
+1. [Immediate action]
+2. [Short-term action]
+3. [Long-term planning]
 
 ---
-
-## APPENDIX: COMPLETE TASK INVENTORY
-
-[Comprehensive list of all tasks documented, organized by employee]
-
----
-
-**End of Report**
 
 CRITICAL REQUIREMENTS:
-- Use ACTUAL numbers from the conversations (time estimates, frequencies)
-- Include SPECIFIC examples and quotes from conversations
-- Be concrete and actionable - no vague recommendations
-- Demonstrate clear ROI for each opportunity
-- Maintain professional tone suitable for client delivery
-- Focus on opportunities, not problems - stay constructive`;
+- Base all findings on actual conversation data - cite specific examples
+- Quantify time impact wherever possible
+- Prioritize opportunities that affect multiple team members
+- Consider GSDC's small team size - solutions must be practical for 5 people
+- Recognize resource constraints - favor low-cost/no-cost solutions
+- Connect automation to strategic imperatives
+- Be specific - generic advice has no value
+- Make recommendations actionable`;
 }
 
 // Individual Employee Analysis Prompt
 function getIndividualAnalysisPrompt(employeeData) {
-  return `You are analyzing task conversations from a specific employee at ${CLIENT_INFO.name} using TIIS methodology.
+  return `You are analyzing 2 weeks of task documentation from a single employee at ${CLIENT_INFO.name}. Your goal is to provide personalized insights and recommendations for THIS individual.
 
-EMPLOYEE: ${employeeData.name}, ${employeeData.role}
+${ORG_CONTEXT}
 
-DATA PROVIDED:
-${employeeData.conversations}
+EMPLOYEE DATA:
+${JSON.stringify(employeeData, null, 2)}
 
 YOUR TASK:
-Generate an individual workflow analysis report that is:
-- Personalized and specific to this employee
-- Actionable and constructive
-- Based on their actual documented tasks
-- Focused on helping them work more efficiently and strategically
+Create a personal workflow analysis report that will be shared with this employee and their supervisor. Focus on their specific opportunities for efficiency gains and professional development.
+
+REPORT STRUCTURE:
+
+# Personal Workflow Analysis
+**[Employee Name] - [Job Title]**
+*Prepared by TrueNorth AI Services*
 
 ---
 
-# ${employeeData.name} - Individual Workflow Analysis
-
-**Role:** ${employeeData.role}  
-**Analysis Period:** [Date Range]  
-**Tasks Documented:** [N]  
-**Total Conversations:** [N]  
-
----
-
-## EMPLOYEE PROFILE
+## YOUR ROLE AT GSDC
 
 **Primary Responsibilities:**
-[From onboarding - what they're responsible for]
+[Summarize from their onboarding and task conversations]
 
-**Tools & Systems Used:**
-[List their software, databases, spreadsheets]
+**Strategic Imperatives You Support:**
+[Which of the four imperatives their work advances]
 
-**Self-Identified Pain Points:**
-[What they mentioned as frustrating or time-consuming in onboarding]
-
-**Work Preferences:**
-[What they enjoy, what they want to do more of]
+**Time Allocation:**
+[How they currently spend their time - from onboarding]
 
 ---
 
-## DOCUMENTED TASKS SUMMARY
+## WHAT WE LEARNED FROM YOUR TASK DOCUMENTATION
 
-[For each task documented, provide:]
+**Tasks Documented:** [Number]
+**Total Conversation Length:** [Estimate based on message count]
+**Systems/Tools Used:** [List]
 
-**Task:** [Task Name]  
-**Frequency:** [How often they do it]  
-**Time Investment:** [Estimate based on their descriptions]  
-**Complexity:** [Simple/Moderate/Complex]  
-**Pain Points:** [Issues they mentioned]  
-
-[List all N tasks]
-
----
-
-## TIME ALLOCATION ANALYSIS
-
-Based on documented tasks, current time allocation:
-- **Administrative/Data Entry:** X% [~Y hours/week]
-- **Strategic/Creative Work:** A% [~B hours/week]
-- **Communication/Coordination:** C% [~D hours/week]
-
-**Gap Analysis:**
-[Compare to their stated ideal allocation from onboarding]
-- Currently spending [X hours/week] on admin tasks
-- Would prefer to spend [Y hours/week] on admin tasks
-- **Opportunity:** Free up [Z hours/week] for strategic work
+**Most Time-Intensive Tasks:**
+1. [Task name]: [Estimated hours per week/month]
+2. [Task name]: [Time]
+3. [Task name]: [Time]
 
 ---
 
-## AUTOMATION OPPORTUNITIES (Specific to ${employeeData.name})
+## YOUR OPPORTUNITIES FOR EFFICIENCY
 
-Ranked by personal impact (time savings + job satisfaction improvement).
+### HIGH-PRIORITY IMPROVEMENTS
+**1. [Specific Task/Process]**
+- **Current State:** [How you do it now, using your own descriptions]
+- **Time Investment:** [Your estimate from conversations]
+- **Pain Points:** [What you said was frustrating]
+- **Opportunity:** [Specific improvement - automation, tool change, process redesign]
+- **Expected Benefit:** [Time saved, frustration reduced]
+- **How to Implement:** [Concrete steps you or GSDC could take]
 
-### OPPORTUNITY #1: [Specific Task Automation]
+[Repeat for top 3-5 opportunities specific to this person]
 
-**Current Process:**
-[Describe based on their actual conversation]
-
-**Proposed Improvement:**
-[Specific recommendation for automation or process improvement]
-
-**Personal Impact:**
-- Time savings: [X hours/week or per occurrence]
-- Frustration reduction: [If they expressed frustration about this]
-- Quality improvement: [If applicable]
-
-**What You'll Need:**
-[Any new skills, tools, or support required]
-
-[Repeat for 3-5 top opportunities specific to this person]
-
----
-
-## WORKFLOW OPTIMIZATION (Beyond Automation)
-
-**Process Improvements:**
-[Changes they could make without automation]
-
-**Tool Recommendations:**
-[Software or features they might not know about]
-
-**Training Opportunities:**
-[Skills that would make them more efficient]
-
----
-
-## QUICK WINS (Action Items for This Week)
+### QUICK WINS (Do This Week)
+These are small changes you can make immediately:
 
 1. **[Immediate action]:** [Specific recommendation, expected 30-min time savings]
 2. **[Simple change]:** [Another quick win]
@@ -544,6 +527,8 @@ CRITICAL REQUIREMENTS:
 
 module.exports = {
   CLIENT_INFO,
+  EMPLOYEE_PROFILES,
+  getEmployeeContext,
   getOnboardingSystemPrompt,
   getTaskSystemPrompt,
   getCorporationAnalysisPrompt,

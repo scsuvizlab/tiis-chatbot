@@ -12,9 +12,10 @@ const MAX_TOKENS = 3000;
  * Send message in onboarding conversation
  * @param {Array} conversationHistory - Array of {role, content} messages
  * @param {string} userMessage - New user message
+ * @param {string} userEmail - Optional user email for personalized context
  * @returns {Promise<string>} Claude's response
  */
-async function sendOnboardingMessage(conversationHistory, userMessage) {
+async function sendOnboardingMessage(conversationHistory, userMessage, userEmail = null) {
   const messages = [
     ...conversationHistory,
     { role: 'user', content: userMessage }
@@ -23,7 +24,7 @@ async function sendOnboardingMessage(conversationHistory, userMessage) {
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system: config.getOnboardingSystemPrompt(),
+    system: config.getOnboardingSystemPrompt(userEmail),
     messages: messages
   });
   

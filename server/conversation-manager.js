@@ -40,15 +40,20 @@ function getConversationPath(email, conversationId) {
 
 // Start onboarding conversation
 router.post('/onboarding/start', requireAuth, async (req, res) => {
+  const email = req.user.email;
+  
+  console.log(`[Onboarding Start] User: ${email}`);
+  
   try {
-    const email = req.user.email;
     const user = await userManager.getUserByEmail(email);
     
     if (!user) {
+      console.log(`[Onboarding Start] User not found: ${email}`);
       return res.status(404).json({ error: 'User not found' });
     }
     
     if (user.onboarding_complete) {
+      console.log(`[Onboarding Start] User already completed onboarding: ${email}`);
       return res.status(400).json({ error: 'Onboarding already completed' });
     }
     
@@ -68,9 +73,17 @@ router.post('/onboarding/start', requireAuth, async (req, res) => {
     // Save to file
     await ensureConversationsDir(email);
     const filepath = getConversationPath(email, 'onboarding');
-    await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+    console.log(`[Onboarding Start] Creating file: ${filepath}`);
     
-    // Generate greeting
+    try {
+      await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+      console.log(`[Onboarding Start] File created successfully`);
+    } catch (error) {
+      console.error(`[Onboarding Start] CRITICAL: Failed to create file:`, error);
+      return res.status(500).json({ error: 'Failed to create onboarding conversation' });
+    }
+    
+    // Generate greeting - pass email for personalized context
     const greeting = `Welcome to TIIS, ${user.name}! Let's start by understanding your role at ${require('./config').CLIENT_INFO.name}. What's your job title?`;
     
     // Save greeting message
@@ -82,7 +95,16 @@ router.post('/onboarding/start', requireAuth, async (req, res) => {
     });
     
     conversationData.last_updated = new Date().toISOString();
-    await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+    
+    try {
+      await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+      console.log(`[Onboarding Start] Greeting message saved`);
+    } catch (error) {
+      console.error(`[Onboarding Start] Failed to save greeting:`, error);
+      // Continue anyway - we can recover from this
+    }
+    
+    console.log(`[Onboarding Start] SUCCESS for user: ${email}`);
     
     res.json({
       conversation_id: 'onboarding',
@@ -90,17 +112,19 @@ router.post('/onboarding/start', requireAuth, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error starting onboarding:', error);
-    res.status(500).json({ error: 'Failed to start onboarding' });
+    console.error(`[Onboarding Start] Unexpected error:`, error);
+    res.status(500).json({ error: 'Failed to start onboarding: ' + error.message });
   }
 });
 
 // Send message in onboarding
 router.post('/onboarding/message', requireAuth, async (req, res) => {
+  const email = req.user.email;
+  const { conversation_id, message, attachments } = req.body;
+  
+  console.log(`[Onboarding Message] User: ${email}, Message length: ${message?.length || 0}`);
+  
   try {
-    const email = req.user.email;
-    const { conversation_id, message, attachments } = req.body;
-    
     if (conversation_id !== 'onboarding') {
       return res.status(400).json({ error: 'Invalid conversation ID' });
     }
@@ -111,12 +135,23 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
     
     // Load conversation
     const filepath = getConversationPath(email, 'onboarding');
-    const conversationData = JSON.parse(await fs.readFile(filepath, 'utf8'));
+    console.log(`[Onboarding Message] Reading file: ${filepath}`);
+    
+    let conversationData;
+    try {
+      const fileContent = await fs.readFile(filepath, 'utf8');
+      conversationData = JSON.parse(fileContent);
+      console.log(`[Onboarding Message] Loaded conversation with ${conversationData.messages.length} messages`);
+    } catch (error) {
+      console.error(`[Onboarding Message] Failed to read conversation file:`, error);
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
     
     // Process attachments if any
     const userContent = [{ type: 'text', text: message }];
     
     if (attachments && attachments.length > 0) {
+      console.log(`[Onboarding Message] Processing ${attachments.length} attachments`);
       const processedAttachments = await processAttachments(
         attachments, 
         email, 
@@ -140,8 +175,12 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
       content: msg.content
     }));
     
-    // Get Claude response
-    const claudeResponse = await claudeService.sendOnboardingMessage(history, message);
+    console.log(`[Onboarding Message] Sending to Claude with ${history.length} messages in history`);
+    
+    // Get Claude response - PASS EMAIL FOR PERSONALIZED CONTEXT
+    const claudeResponse = await claudeService.sendOnboardingMessage(history, message, email);
+    
+    console.log(`[Onboarding Message] Received Claude response, length: ${claudeResponse.length}`);
     
     // Save Claude response
     conversationData.messages.push({
@@ -152,10 +191,24 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
     });
     
     conversationData.last_updated = new Date().toISOString();
-    await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+    
+    // Write file with error handling
+    try {
+      await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+      console.log(`[Onboarding Message] Successfully saved conversation with ${conversationData.messages.length} messages`);
+    } catch (error) {
+      console.error(`[Onboarding Message] CRITICAL: Failed to save conversation file:`, error);
+      // Return error but include response so user doesn't lose it
+      return res.status(500).json({ 
+        error: 'Failed to save conversation', 
+        bot_response: claudeResponse,
+        warning: 'Your message was processed but may not have been saved. Please contact support.'
+      });
+    }
     
     // Check if Claude generated a summary (completion)
     const isSummary = detectOnboardingSummary(claudeResponse);
+    console.log(`[Onboarding Message] Summary detected: ${isSummary}`);
     
     res.json({
       message_id: conversationData.messages[conversationData.messages.length - 1].message_id,
@@ -164,34 +217,60 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error processing onboarding message:', error);
-    res.status(500).json({ error: 'Failed to process message' });
+    console.error(`[Onboarding Message] Unexpected error:`, error);
+    res.status(500).json({ error: 'Failed to process message: ' + error.message });
   }
 });
 
 // Complete onboarding
 router.post('/onboarding/complete', requireAuth, async (req, res) => {
+  const email = req.user.email;
+  const { conversation_id, summary } = req.body;
+  
+  console.log(`[Onboarding Complete] User: ${email}, Summary length: ${summary?.length || 0}`);
+  
   try {
-    const email = req.user.email;
-    const { conversation_id, summary } = req.body;
-    
     if (conversation_id !== 'onboarding' || !summary) {
       return res.status(400).json({ error: 'Invalid request' });
     }
     
     // Load and update conversation
     const filepath = getConversationPath(email, 'onboarding');
-    const conversationData = JSON.parse(await fs.readFile(filepath, 'utf8'));
+    console.log(`[Onboarding Complete] Reading file: ${filepath}`);
+    
+    let conversationData;
+    try {
+      const fileContent = await fs.readFile(filepath, 'utf8');
+      conversationData = JSON.parse(fileContent);
+    } catch (error) {
+      console.error(`[Onboarding Complete] Failed to read conversation:`, error);
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
     
     conversationData.status = 'complete';
     conversationData.summary = summary;
     conversationData.completed_at = new Date().toISOString();
     conversationData.last_updated = new Date().toISOString();
     
-    await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+    // Save with error handling
+    try {
+      await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+      console.log(`[Onboarding Complete] Saved conversation file successfully`);
+    } catch (error) {
+      console.error(`[Onboarding Complete] CRITICAL: Failed to save conversation:`, error);
+      return res.status(500).json({ error: 'Failed to save onboarding completion' });
+    }
     
     // Mark user onboarding complete
-    await userManager.markOnboardingComplete(email);
+    try {
+      await userManager.markOnboardingComplete(email);
+      console.log(`[Onboarding Complete] Marked user as complete successfully`);
+    } catch (error) {
+      console.error(`[Onboarding Complete] CRITICAL: Failed to mark user complete:`, error);
+      return res.status(500).json({ error: 'Failed to update user status' });
+    }
+    
+    console.log(`[Onboarding Complete] SUCCESS for user: ${email}`);
     
     res.json({
       success: true,
@@ -199,8 +278,8 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error completing onboarding:', error);
-    res.status(500).json({ error: 'Failed to complete onboarding' });
+    console.error(`[Onboarding Complete] Unexpected error:`, error);
+    res.status(500).json({ error: 'Failed to complete onboarding: ' + error.message });
   }
 });
 
@@ -378,27 +457,21 @@ router.get('/list', requireAuth, async (req, res) => {
             type: data.type,
             title: data.type === 'onboarding' ? 'Onboarding' : data.title,
             status: data.status,
+            created_at: data.created_at,
             last_updated: data.last_updated,
-            message_count: data.messages.length,
-            has_attachments: data.messages.some(msg => 
-              Array.isArray(msg.content) && msg.content.some(c => c.type === 'image' || c.type === 'document')
-            )
+            message_count: data.messages.length
           });
         }
       }
+      
     } catch (error) {
-      if (error.code !== 'ENOENT') {
-        throw error;
-      }
-      // No conversations yet
+      // No conversations directory yet
     }
     
-    // Sort: onboarding first, then by last_updated desc
-    conversations.sort((a, b) => {
-      if (a.type === 'onboarding') return -1;
-      if (b.type === 'onboarding') return 1;
-      return new Date(b.last_updated) - new Date(a.last_updated);
-    });
+    // Sort by last_updated (most recent first)
+    conversations.sort((a, b) => 
+      new Date(b.last_updated) - new Date(a.last_updated)
+    );
     
     res.json({ conversations });
     
@@ -420,12 +493,22 @@ router.get('/:conversation_id', requireAuth, async (req, res) => {
       const data = await fs.readFile(filepath, 'utf8');
       const conversation = JSON.parse(data);
       
-      // Format for frontend
-      const formattedMessages = conversation.messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp
-      }));
+      // Format messages for frontend
+      const formattedMessages = conversation.messages.map(msg => {
+        // Handle both old format (string content) and new format (array content)
+        let content = msg.content;
+        
+        if (typeof content === 'string') {
+          content = [{ type: 'text', text: content }];
+        }
+        
+        return {
+          message_id: msg.message_id,
+          role: msg.role,
+          content: content,
+          timestamp: msg.timestamp
+        };
+      });
       
       res.json({
         conversation: {
@@ -585,22 +668,33 @@ async function processAttachments(attachments, email, conversationId, messageId)
 
 // Helper: Detect if Claude generated onboarding summary
 function detectOnboardingSummary(message) {
+  // Updated to match new prompt format
   const indicators = [
     'PRIMARY RESPONSIBILITIES:',
+    'PRIMARY STRATEGIC IMPERATIVES:',
     'TOOLS & SYSTEMS:',
+    'KEY PROGRAMS/INITIATIVES:',
     'TIME ALLOCATION:',
     'KEY PAIN POINTS:',
+    'COLLABORATION PATTERNS:',
+    'STRENGTHS & INTERESTS:',
     'Does this accurately capture your role'
   ];
   
   let matchCount = 0;
+  const foundIndicators = [];
+  
   for (const indicator of indicators) {
     if (message.includes(indicator)) {
       matchCount++;
+      foundIndicators.push(indicator);
     }
   }
   
-  return matchCount >= 3;
+  console.log(`[Summary Detection] Found ${matchCount} indicators:`, foundIndicators);
+  
+  // Need at least 4 indicators to be confident it's a summary
+  return matchCount >= 4;
 }
 
 module.exports = router;
