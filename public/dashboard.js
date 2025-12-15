@@ -1,5 +1,14 @@
-// TIIS Dashboard - Full Implementation
+// TIIS Dashboard - Full Implementation with Typewriter Animation
 const API_BASE = '/api';
+
+// Animation configuration
+const ANIMATION_CONFIG = {
+    minDuration: 1500,          // Minimum animation time (1.5 seconds)
+    maxDuration: 10000,         // Maximum animation time (10 seconds)
+    baseWordsPerSecond: 6,      // Natural reading speed
+    minWordsPerSecond: 3,       // Slowest reading speed
+    maxWordsPerSecond: 12,      // Fastest reading speed
+};
 
 // Global state
 let currentUser = null;
@@ -7,6 +16,7 @@ let conversations = [];
 let currentConversationId = null;
 let currentConversation = null;
 let pendingAttachments = [];
+let activeAnimation = null;  // Track active animation for cancellation
 
 // DOM Elements - will be set after DOM loads
 let elements = {};
@@ -348,9 +358,9 @@ function renderConversation() {
     // Clear messages
     elements.messagesContainer.innerHTML = '';
     
-    // Render each message
+    // Render each message (no animation for historical messages)
     currentConversation.messages.forEach(msg => {
-        renderMessage(msg);
+        renderMessage(msg, false); // false = no animation
     });
     
     // Scroll to bottom
@@ -358,7 +368,7 @@ function renderConversation() {
 }
 
 // Render a single message
-function renderMessage(message) {
+function renderMessage(message, animate = false, audioDuration = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.role}-message`;
     
@@ -366,7 +376,8 @@ function renderMessage(message) {
     bubbleDiv.className = 'message-bubble';
     
     // Handle content array (text + attachments)
-    const content = Array.isArray(message.content) ? message.content : [{ type: 'text', text: message.content }];
+    const content = Array.isArray(message.content) ? 
+        message.content : [{ type: 'text', text: message.content }];
     
     // Render attachments first
     const attachments = content.filter(c => c.type === 'image' || c.type === 'document');
@@ -387,23 +398,98 @@ function renderMessage(message) {
     if (textContent) {
         const textDiv = document.createElement('div');
         textDiv.className = 'message-text';
-        textDiv.textContent = textContent.text;
-        bubbleDiv.appendChild(textDiv);
+        
+        if (animate && message.role === 'assistant') {
+            // Start with empty text - will be animated
+            textDiv.textContent = '';
+            bubbleDiv.appendChild(textDiv);
+            messageDiv.appendChild(bubbleDiv);
+            elements.messagesContainer.appendChild(messageDiv);
+            
+            // Start animation with optional audio duration
+            animateMessage(textDiv, textContent.text, messageDiv, audioDuration);
+        } else {
+            // No animation - just display
+            textDiv.textContent = textContent.text;
+            bubbleDiv.appendChild(textDiv);
+            messageDiv.appendChild(bubbleDiv);
+            elements.messagesContainer.appendChild(messageDiv);
+        }
+    } else {
+        messageDiv.appendChild(bubbleDiv);
+        elements.messagesContainer.appendChild(messageDiv);
     }
     
-    messageDiv.appendChild(bubbleDiv);
-    elements.messagesContainer.appendChild(messageDiv);
+    return messageDiv;
+}
+
+// Calculate animation duration based on text length or audio duration
+function calculateAnimationDuration(text, audioDuration = null) {
+    if (audioDuration) {
+        // Sync to audio duration (convert to milliseconds)
+        return Math.max(ANIMATION_CONFIG.minDuration, audioDuration * 1000);
+    }
     
-    // Add voice playback button to bot messages
-    if (message.role === 'assistant' && window.userVoiceInterface) {
-        const textContent = Array.isArray(message.content) 
-            ? message.content.find(c => c.type === 'text')?.text 
-            : message.content;
+    // Calculate based on word count
+    const wordCount = text.trim().split(/\s+/).length;
+    const durationMs = (wordCount / ANIMATION_CONFIG.baseWordsPerSecond) * 1000;
+    
+    // Clamp to min/max
+    return Math.max(
+        ANIMATION_CONFIG.minDuration,
+        Math.min(ANIMATION_CONFIG.maxDuration, durationMs)
+    );
+}
+
+// Animate message text word-by-word
+async function animateMessage(textDiv, fullText, messageDiv, audioDuration = null) {
+    // Calculate animation duration
+    const duration = calculateAnimationDuration(fullText, audioDuration);
+    
+    // Split text into words
+    const words = fullText.split(' ');
+    const intervalMs = duration / words.length;
+    
+    // Hide typing indicator when animation starts
+    elements.typingIndicator.classList.add('hidden');
+    
+    // Create animation controller
+    const controller = { cancelled: false };
+    activeAnimation = controller;
+    
+    // Animate word by word
+    for (let i = 0; i < words.length; i++) {
+        if (controller.cancelled) {
+            // Animation was cancelled, show full text immediately
+            textDiv.textContent = fullText;
+            break;
+        }
         
-        if (textContent) {
-            window.userVoiceInterface.addPlaybackButton(messageDiv, textContent);
+        // Add next word
+        if (i === 0) {
+            textDiv.textContent = words[i];
+        } else {
+            textDiv.textContent += ' ' + words[i];
+        }
+        
+        // Scroll to show new content
+        scrollToBottom();
+        
+        // Wait before next word
+        if (i < words.length - 1) {
+            await sleep(intervalMs);
         }
     }
+    
+    // Clear active animation
+    if (activeAnimation === controller) {
+        activeAnimation = null;
+    }
+}
+
+// Helper: Sleep for ms
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Send message
@@ -417,6 +503,12 @@ async function handleSendMessage() {
     
     if (!message && pendingAttachments.length === 0) {
         return;
+    }
+    
+    // Cancel any active animation
+    if (activeAnimation) {
+        activeAnimation.cancelled = true;
+        activeAnimation = null;
     }
     
     // Disable input while sending
@@ -437,6 +529,7 @@ async function handleSendMessage() {
         
         // Show typing indicator
         elements.typingIndicator.classList.remove('hidden');
+        scrollToBottom();
         
         // Send message
         const response = await fetch(endpoint, {
@@ -456,14 +549,16 @@ async function handleSendMessage() {
         
         const data = await response.json();
         
-        // Hide typing indicator
-        elements.typingIndicator.classList.add('hidden');
-        
-        // Clear input and attachments
+        // Clear input and attachments IMMEDIATELY (before animation)
         elements.userInput.value = '';
         elements.userInput.style.height = 'auto';
         pendingAttachments = [];
         renderAttachmentPreview();
+        
+        // Re-enable input immediately
+        elements.userInput.disabled = false;
+        elements.sendBtn.disabled = false;
+        elements.userInput.focus();
         
         // Update conversation title if generated
         if (data.title_generated) {
@@ -472,12 +567,67 @@ async function handleSendMessage() {
             await loadConversations(); // Refresh sidebar
         }
         
-        // Reload conversation to show new messages
-        await loadConversation(currentConversationId);
+        // Reload conversation to get user message, then animate bot response
+        const reloadResponse = await fetch(`${API_BASE}/conversations/${currentConversationId}`, {
+            credentials: 'include'
+        });
+        
+        if (reloadResponse.ok) {
+            const reloadData = await reloadResponse.json();
+            currentConversation = reloadData.conversation;
+            
+            // Render last two messages (user + bot)
+            const messages = currentConversation.messages;
+            if (messages.length >= 2) {
+                const userMsg = messages[messages.length - 2];
+                const botMsg = messages[messages.length - 1];
+                
+                // Render user message (no animation)
+                renderMessage(userMsg, false);
+                
+                // Check if auto-play is enabled
+                const shouldAutoPlay = window.userVoiceInterface && 
+                                       window.userVoiceInterface.isAutoPlayEnabled();
+                
+                if (shouldAutoPlay) {
+                    // AUTO-PLAY MODE: Generate audio first, then animate with perfect sync
+                    const botText = Array.isArray(botMsg.content) 
+                        ? botMsg.content.find(c => c.type === 'text')?.text 
+                        : botMsg.content;
+                    
+                    if (botText) {
+                        console.log('🔊 Auto-play enabled - generating audio first...');
+                        const audioData = await window.userVoiceInterface.generateAudioForText(botText);
+                        
+                        if (audioData) {
+                            // Render with animation synced to audio duration
+                            const messageDiv = renderMessage(botMsg, true, audioData.duration);
+                            
+                            // Start playing audio
+                            audioData.audio.play();
+                            
+                            // Cleanup when done
+                            audioData.audio.addEventListener('ended', () => {
+                                URL.revokeObjectURL(audioData.url);
+                            });
+                        } else {
+                            // Audio generation failed, fall back to text-only animation
+                            renderMessage(botMsg, true);
+                        }
+                    }
+                } else {
+                    // Normal mode: Text animation only
+                    renderMessage(botMsg, true);
+                }
+            }
+        }
         
         // Check if onboarding summary
         if (isOnboarding && data.is_summary) {
-            showSummaryModal(data.bot_response);
+            // Show summary modal AFTER animation completes
+            setTimeout(() => {
+                showSummaryModal(data.bot_response);
+            }, 500);
         }
         
     } catch (error) {
@@ -485,37 +635,34 @@ async function handleSendMessage() {
         elements.typingIndicator.classList.add('hidden');
         alert('Failed to send message. Please try again.');
     } finally {
+        // Ensure input is re-enabled
         elements.userInput.disabled = false;
         elements.sendBtn.disabled = false;
-        elements.userInput.focus();
     }
 }
 
-// Handle file selection
-function handleFileSelect(event) {
-    const files = Array.from(event.target.files);
+// File handling
+function handleFileSelect(e) {
+    const files = Array.from(e.target.files);
     addAttachments(files);
-    event.target.value = ''; // Reset input
+    e.target.value = ''; // Clear input
 }
 
-// Handle file drop
 function handleFileDrop(files) {
-    const fileArray = Array.from(files);
-    addAttachments(fileArray);
+    addAttachments(Array.from(files));
 }
 
-// Add attachments to pending list
 function addAttachments(files) {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    
     files.forEach(file => {
-        if (!allowedTypes.includes(file.type)) {
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+        if (!validTypes.includes(file.type)) {
             alert(`File type not supported: ${file.name}`);
             return;
         }
         
-        if (file.size > maxSize) {
+        // Validate file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
             alert(`File too large (max 10MB): ${file.name}`);
             return;
         }
@@ -526,20 +673,17 @@ function addAttachments(files) {
     renderAttachmentPreview();
 }
 
-// Render attachment preview
 function renderAttachmentPreview() {
     if (pendingAttachments.length === 0) {
         elements.attachmentPreview.innerHTML = '';
-        elements.attachmentPreview.style.display = 'none';
         return;
     }
     
-    elements.attachmentPreview.style.display = 'flex';
     elements.attachmentPreview.innerHTML = '';
     
     pendingAttachments.forEach((file, index) => {
         const item = document.createElement('div');
-        item.className = 'attachment-preview-item';
+        item.className = 'attachment-item';
         
         const icon = file.type.startsWith('image/') ? '🖼️' : '📄';
         
@@ -556,13 +700,11 @@ function renderAttachmentPreview() {
     });
 }
 
-// Remove attachment from pending list
 function removeAttachment(index) {
     pendingAttachments.splice(index, 1);
     renderAttachmentPreview();
 }
 
-// Convert file to base64
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -741,22 +883,13 @@ function showSettingsModal() {
     }
 }
 
-function hideSettingsModal() {
-    // Close the voice settings modal
-    if (window.userVoiceInterface) {
-        window.userVoiceInterface.hideSettings();
-    }
-}
-
 // Show welcome screen
 function showWelcomeScreen() {
     elements.welcomeScreen.classList.remove('hidden');
     elements.chatArea.classList.add('hidden');
     elements.chatTitle.textContent = 'Welcome';
     
-    // Handle onboarding button visibility and welcome message
-    const welcomeSection = document.querySelector('.welcome-section');
-    
+    // Handle onboarding button visibility
     if (currentUser.onboarding_complete) {
         // Onboarding complete - hide the onboarding section
         if (elements.startOnboardingBtn) {

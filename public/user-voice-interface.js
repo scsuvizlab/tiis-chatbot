@@ -1,5 +1,5 @@
-// User Voice Interface Component
-// Handles voice recording, transcription, playback, and settings
+// User Voice Interface Component - WITH AUTO-PLAY TOGGLE
+// Handles voice recording, transcription, playback, and AUTO-PLAY mode
 
 class UserVoiceInterface {
     constructor() {
@@ -12,9 +12,12 @@ class UserVoiceInterface {
         this.recordingStartTime = 0;
         this.maxRecordingTime = 30000; // 30 seconds
         this.silenceTimeout = 1500; // 1.5 seconds
-        this.currentAudio = null; // For playback
+        this.currentAudio = null;
         this.availableVoices = [];
         this.userPreferredVoice = null;
+        
+        // NEW: Auto-play state
+        this.autoPlayEnabled = false;
         
         this.elements = {};
         this.init();
@@ -23,10 +26,55 @@ class UserVoiceInterface {
     async init() {
         await this.loadVoicePreference();
         await this.loadAvailableVoices();
+        this.loadAutoPlayPreference(); // NEW
         this.injectUI();
         this.cacheElements();
         this.setupEventListeners();
+        this.updateAutoPlayUI(); // NEW
         console.log('🎤 Voice interface initialized');
+    }
+    
+    // NEW: Load auto-play preference from localStorage
+    loadAutoPlayPreference() {
+        const saved = localStorage.getItem('tiis_autoplay_enabled');
+        this.autoPlayEnabled = saved === 'true';
+        console.log('Auto-play enabled:', this.autoPlayEnabled);
+    }
+    
+    // NEW: Save auto-play preference
+    saveAutoPlayPreference() {
+        localStorage.setItem('tiis_autoplay_enabled', this.autoPlayEnabled);
+        this.updateAutoPlayUI();
+    }
+    
+    // NEW: Check if auto-play is enabled
+    isAutoPlayEnabled() {
+        return this.autoPlayEnabled;
+    }
+    
+    // NEW: Toggle auto-play
+    toggleAutoPlay() {
+        this.autoPlayEnabled = !this.autoPlayEnabled;
+        this.saveAutoPlayPreference();
+        console.log('Auto-play toggled:', this.autoPlayEnabled);
+    }
+    
+    // NEW: Update UI to show auto-play state
+    updateAutoPlayUI() {
+        const speakerBtn = this.elements.speakerBtn;
+        if (!speakerBtn) return;
+        
+        if (this.autoPlayEnabled) {
+            // Auto-play ON
+            speakerBtn.innerHTML = '🔊';
+            speakerBtn.title = 'Auto-play ON (click to turn off)';
+            speakerBtn.style.color = 'var(--primary-color)';
+        } else {
+            // Auto-play OFF
+            speakerBtn.innerHTML = '🔇';
+            speakerBtn.title = 'Auto-play OFF (click to turn on)';
+            speakerBtn.style.color = '';
+        }
     }
     
     async loadVoicePreference() {
@@ -38,7 +86,6 @@ class UserVoiceInterface {
             if (response.ok) {
                 const data = await response.json();
                 this.availableVoices = data.voices || [];
-                // User preference will be fetched when needed
             }
         } catch (error) {
             console.error('Failed to load voice preferences:', error);
@@ -72,6 +119,13 @@ class UserVoiceInterface {
         micBtn.title = 'Record voice message';
         micBtn.innerHTML = '🎤';
         
+        // Create speaker button (now a toggle!)
+        const speakerBtn = document.createElement('button');
+        speakerBtn.id = 'voice-speaker-btn';
+        speakerBtn.className = 'btn-icon voice-speaker-btn';
+        speakerBtn.title = 'Toggle auto-play (currently OFF)';
+        speakerBtn.innerHTML = '🔇'; // Muted by default
+        
         // Create settings button
         const settingsBtn = document.createElement('button');
         settingsBtn.id = 'voice-settings-btn';
@@ -82,6 +136,7 @@ class UserVoiceInterface {
         // Insert before textarea
         const textarea = inputRow.querySelector('#user-input');
         inputRow.insertBefore(micBtn, textarea);
+        inputRow.insertBefore(speakerBtn, textarea);
         inputRow.appendChild(settingsBtn);
         
         // Add recording UI container
@@ -136,13 +191,14 @@ class UserVoiceInterface {
                 
                 <div class="settings-group" style="margin-bottom: 1.5rem;">
                     <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary);">Voice Playback</h3>
+                    
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="voice-select">Preferred Voice</label>
                         <select id="voice-select" class="voice-select">
                             <option value="">Loading voices...</option>
                         </select>
                         <small style="color: var(--text-secondary); font-size: 0.875rem; display: block; margin-top: 0.5rem;">
-                            Choose the voice you'd like to hear for AI responses
+                            Choose the voice you'd like to hear for AI responses. Click the speaker button 🔊 to enable auto-play.
                         </small>
                     </div>
                     
@@ -171,6 +227,7 @@ class UserVoiceInterface {
         this.elements = {
             // Recording buttons
             recordBtn: document.getElementById('voice-record-btn'),
+            speakerBtn: document.getElementById('voice-speaker-btn'), // NEW: Speaker toggle button
             settingsBtn: document.getElementById('voice-settings-btn'),
             
             // Recording UI
@@ -187,7 +244,7 @@ class UserVoiceInterface {
             saveSettingsBtn: document.getElementById('save-voice-settings-btn'),
             cancelSettingsBtn: document.getElementById('cancel-voice-settings-btn'),
             
-            // Input area (for enabling/disabling)
+            // Input area
             userInput: document.getElementById('user-input'),
             sendBtn: document.getElementById('send-btn'),
             attachBtn: document.getElementById('attach-btn')
@@ -200,12 +257,55 @@ class UserVoiceInterface {
         this.elements.stopRecordingBtn?.addEventListener('click', () => this.stopRecording());
         this.elements.cancelRecordingBtn?.addEventListener('click', () => this.cancelRecording());
         
+        // Speaker button - toggles auto-play
+        this.elements.speakerBtn?.addEventListener('click', () => this.toggleAutoPlay());
+        
         // Settings
         this.elements.settingsBtn?.addEventListener('click', () => this.showSettings());
         this.elements.cancelSettingsBtn?.addEventListener('click', () => this.hideSettings());
         this.elements.saveSettingsBtn?.addEventListener('click', () => this.saveSettings());
         this.elements.voiceSelect?.addEventListener('change', () => this.onVoiceChange());
         this.elements.previewVoiceBtn?.addEventListener('click', () => this.previewVoice());
+    }
+    
+    // NEW: Generate audio BEFORE rendering (for auto-play mode)
+    async generateAudioForText(text) {
+        try {
+            console.log('🔊 Generating audio for text (length:', text.length, ')');
+            
+            const response = await fetch(`${this.API_BASE}/voice/synthesize`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to generate audio');
+            }
+            
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+            const audio = new Audio(audioUrl);
+            
+            // Wait for audio to load to get duration
+            await new Promise((resolve, reject) => {
+                audio.addEventListener('loadedmetadata', resolve);
+                audio.addEventListener('error', reject);
+            });
+            
+            console.log('✅ Audio generated, duration:', audio.duration, 'seconds');
+            
+            return {
+                audio: audio,
+                duration: audio.duration,
+                url: audioUrl
+            };
+            
+        } catch (error) {
+            console.error('Failed to generate audio:', error);
+            return null;
+        }
     }
     
     // ============================================
@@ -217,28 +317,24 @@ class UserVoiceInterface {
             // Request microphone permission
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            // Try to use WAV format if supported, fallback to default
             const mimeType = MediaRecorder.isTypeSupported('audio/wav') 
                 ? 'audio/wav' 
                 : MediaRecorder.isTypeSupported('audio/webm') 
                     ? 'audio/webm;codecs=opus'
                     : '';
             
-            // Create MediaRecorder
             const options = mimeType ? { mimeType } : {};
             this.mediaRecorder = new MediaRecorder(stream, options);
+            
             this.audioChunks = [];
             
-            console.log('🎤 Recording with format:', this.mediaRecorder.mimeType);
-            
-            this.mediaRecorder.ondataavailable = (event) => {
+            this.mediaRecorder.addEventListener('dataavailable', (event) => {
                 this.audioChunks.push(event.data);
-            };
+            });
             
-            this.mediaRecorder.onstop = () => {
-                this.processRecording();
-                stream.getTracks().forEach(track => track.stop());
-            };
+            this.mediaRecorder.addEventListener('stop', () => {
+                this.handleRecordingComplete();
+            });
             
             // Start recording
             this.mediaRecorder.start();
@@ -246,43 +342,24 @@ class UserVoiceInterface {
             this.recordingStartTime = Date.now();
             
             // Show recording UI
-            this.showRecordingUI();
-            
-            // Start timers
-            this.startRecordingTimer();
-            this.startSilenceDetection(stream);
-            
-            // Disable other inputs
+            this.elements.recordingUI.classList.remove('hidden');
             this.elements.userInput.disabled = true;
             this.elements.sendBtn.disabled = true;
             this.elements.attachBtn.disabled = true;
             
+            // Start timer
+            this.startRecordingTimer();
+            
+            // Auto-stop after max time
+            setTimeout(() => {
+                if (this.recording) {
+                    this.stopRecording();
+                }
+            }, this.maxRecordingTime);
+            
         } catch (error) {
             console.error('Failed to start recording:', error);
-            alert('Failed to access microphone. Please check permissions.');
-        }
-    }
-    
-    stopRecording() {
-        if (this.mediaRecorder && this.recording) {
-            this.mediaRecorder.stop();
-            this.recording = false;
-            this.stopTimers();
-        }
-    }
-    
-    cancelRecording() {
-        if (this.mediaRecorder && this.recording) {
-            this.mediaRecorder.stop();
-            this.recording = false;
-            this.audioChunks = [];
-            this.stopTimers();
-            this.hideRecordingUI();
-            
-            // Re-enable inputs
-            this.elements.userInput.disabled = false;
-            this.elements.sendBtn.disabled = false;
-            this.elements.attachBtn.disabled = false;
+            alert('Could not access microphone. Please check permissions.');
         }
     }
     
@@ -293,127 +370,54 @@ class UserVoiceInterface {
             const minutes = Math.floor(seconds / 60);
             const secs = seconds % 60;
             
-            this.elements.recordingTimer.textContent = 
-                `${minutes}:${secs.toString().padStart(2, '0')}`;
+            this.elements.recordingTimer.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
             
-            // Update progress bar
             const progress = (elapsed / this.maxRecordingTime) * 100;
-            this.elements.recordingProgress.style.width = `${Math.min(progress, 100)}%`;
-            
-            // Auto-stop at max time
-            if (elapsed >= this.maxRecordingTime) {
-                this.stopRecording();
-            }
+            this.elements.recordingProgress.style.width = `${progress}%`;
         }, 100);
     }
     
-    startSilenceDetection(stream) {
-        const audioContext = new AudioContext();
-        const source = audioContext.createMediaStreamSource(stream);
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048;
-        source.connect(analyser);
+    stopRecording() {
+        if (!this.recording) return;
         
-        const dataArray = new Uint8Array(analyser.fftSize);
-        let lastSoundTime = Date.now();
+        this.recording = false;
+        clearInterval(this.recordingTimer);
         
-        const checkSilence = () => {
-            if (!this.recording) {
-                audioContext.close();
-                return;
-            }
-            
-            analyser.getByteTimeDomainData(dataArray);
-            
-            // Check if there's sound
-            let hasSound = false;
-            for (let i = 0; i < dataArray.length; i++) {
-                if (Math.abs(dataArray[i] - 128) > 10) {
-                    hasSound = true;
-                    break;
-                }
-            }
-            
-            if (hasSound) {
-                lastSoundTime = Date.now();
-            } else if (Date.now() - lastSoundTime > this.silenceTimeout) {
-                // Silence detected for 1.5 seconds
-                this.stopRecording();
-                audioContext.close();
-                return;
-            }
-            
-            requestAnimationFrame(checkSilence);
-        };
-        
-        checkSilence();
-    }
-    
-    stopTimers() {
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-            this.recordingTimer = null;
-        }
-        if (this.silenceTimer) {
-            clearTimeout(this.silenceTimer);
-            this.silenceTimer = null;
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            this.mediaRecorder.stop();
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
     }
     
-    showRecordingUI() {
-        this.elements.recordingUI.classList.remove('hidden');
-        this.elements.recordBtn.classList.add('recording-active');
-    }
-    
-    hideRecordingUI() {
+    cancelRecording() {
+        this.recording = false;
+        clearInterval(this.recordingTimer);
+        
+        if (this.mediaRecorder) {
+            this.mediaRecorder.stop();
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        
+        this.audioChunks = [];
+        
+        // Hide recording UI
         this.elements.recordingUI.classList.add('hidden');
-        this.elements.recordBtn.classList.remove('recording-active');
+        this.elements.userInput.disabled = false;
+        this.elements.sendBtn.disabled = false;
+        this.elements.attachBtn.disabled = false;
     }
     
-    async processRecording() {
-        this.hideRecordingUI();
-        
-        if (this.audioChunks.length === 0) {
-            alert('No audio recorded');
-            this.elements.userInput.disabled = false;
-            this.elements.sendBtn.disabled = false;
-            this.elements.attachBtn.disabled = false;
-            return;
-        }
-        
-        // Create audio blob with the actual MIME type used
-        const mimeType = this.mediaRecorder.mimeType;
-        const audioBlob = new Blob(this.audioChunks, { type: mimeType });
-        
-        console.log('📦 Recorded audio:', mimeType, audioBlob.size, 'bytes');
-        
-        // Transcribe
-        await this.transcribeAudio(audioBlob, mimeType);
-    }
-    
-    async transcribeAudio(audioBlob, mimeType) {
+    async handleRecordingComplete() {
         try {
-            // Show loading state
-            this.elements.userInput.value = 'Transcribing...';
-            this.elements.userInput.disabled = true;
+            // Create blob from chunks
+            const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
             
-            // Determine file extension from MIME type
-            let filename = 'recording.webm';
-            if (mimeType.includes('wav')) {
-                filename = 'recording.wav';
-            } else if (mimeType.includes('mp4') || mimeType.includes('m4a')) {
-                filename = 'recording.m4a';
-            } else if (mimeType.includes('mpeg') || mimeType.includes('mp3')) {
-                filename = 'recording.mp3';
-            } else if (mimeType.includes('ogg')) {
-                filename = 'recording.ogg';
-            }
+            // Hide recording UI
+            this.elements.recordingUI.classList.add('hidden');
             
-            console.log('📤 Sending for transcription:', filename);
-            
-            // Convert to FormData
+            // Send to API for transcription
             const formData = new FormData();
-            formData.append('audio', audioBlob, filename);
+            formData.append('audio', audioBlob, 'recording.wav');
             
             const response = await fetch(`${this.API_BASE}/voice/transcribe`, {
                 method: 'POST',
@@ -429,97 +433,20 @@ class UserVoiceInterface {
             
             // Insert transcribed text into input
             this.elements.userInput.value = data.text;
-            this.elements.userInput.disabled = false;
-            this.elements.sendBtn.disabled = false;
-            this.elements.attachBtn.disabled = false;
-            
-            // Focus on input for editing
             this.elements.userInput.focus();
             
+            // Auto-resize textarea
+            this.elements.userInput.style.height = 'auto';
+            this.elements.userInput.style.height = this.elements.userInput.scrollHeight + 'px';
+            
         } catch (error) {
-            console.error('Transcription error:', error);
-            this.elements.userInput.value = '';
+            console.error('Recording processing error:', error);
+            alert('Failed to process voice recording');
+        } finally {
+            // Re-enable input
             this.elements.userInput.disabled = false;
             this.elements.sendBtn.disabled = false;
             this.elements.attachBtn.disabled = false;
-            alert('Failed to transcribe audio. Please type your message instead.');
-        }
-    }
-    
-    // ============================================
-    // PLAYBACK
-    // ============================================
-    
-    addPlaybackButton(messageElement, messageText) {
-        // Check if message already has playback button
-        if (messageElement.querySelector('.voice-playback-btn')) {
-            return;
-        }
-        
-        const playbackBtn = document.createElement('button');
-        playbackBtn.className = 'voice-playback-btn btn-icon';
-        playbackBtn.title = 'Play as audio';
-        playbackBtn.innerHTML = '🔊';
-        playbackBtn.dataset.text = messageText;
-        
-        playbackBtn.addEventListener('click', () => this.playMessage(messageText, playbackBtn));
-        
-        // Add to message
-        const messageContent = messageElement.querySelector('.message-content');
-        if (messageContent) {
-            messageContent.appendChild(playbackBtn);
-        }
-    }
-    
-    async playMessage(text, button) {
-        try {
-            // Stop any currently playing audio
-            if (this.currentAudio) {
-                this.currentAudio.pause();
-                this.currentAudio = null;
-            }
-            
-            // Show loading
-            const originalHTML = button.innerHTML;
-            button.innerHTML = '⏳';
-            button.disabled = true;
-            
-            const response = await fetch(`${this.API_BASE}/voice/synthesize`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text })
-            });
-            
-            if (!response.ok) {
-                throw new Error('Speech synthesis failed');
-            }
-            
-            const audioBlob = await response.blob();
-            const audioUrl = URL.createObjectURL(audioBlob);
-            
-            this.currentAudio = new Audio(audioUrl);
-            
-            this.currentAudio.addEventListener('ended', () => {
-                button.innerHTML = originalHTML;
-                button.disabled = false;
-                URL.revokeObjectURL(audioUrl);
-            });
-            
-            this.currentAudio.addEventListener('error', () => {
-                button.innerHTML = originalHTML;
-                button.disabled = false;
-                alert('Failed to play audio');
-            });
-            
-            await this.currentAudio.play();
-            button.innerHTML = '⏸️';
-            
-        } catch (error) {
-            console.error('Playback error:', error);
-            button.innerHTML = '🔊';
-            button.disabled = false;
-            alert('Failed to play message as audio');
         }
     }
     
@@ -527,7 +454,7 @@ class UserVoiceInterface {
     // SETTINGS
     // ============================================
     
-    async showSettings() {
+    showSettings() {
         // Populate voices
         this.elements.voiceSelect.innerHTML = '';
         
@@ -548,7 +475,7 @@ class UserVoiceInterface {
             this.elements.previewVoiceBtn.disabled = false;
         }
         
-        // Update theme selector to show current theme
+        // Update theme selector
         if (window.themeManager) {
             window.themeManager.updateThemeSelectors();
         }
@@ -572,78 +499,78 @@ class UserVoiceInterface {
         const sampleText = "Hello! This is a preview of how I'll sound when reading your messages.";
         
         try {
-            const btn = this.elements.previewVoiceBtn;
-            btn.disabled = true;
-            btn.textContent = '⏳ Loading...';
+            this.elements.previewVoiceBtn.disabled = true;
+            this.elements.previewVoiceBtn.textContent = 'Playing...';
             
             const response = await fetch(`${this.API_BASE}/voice/synthesize`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: sampleText, voice_id: voiceId })
+                body: JSON.stringify({
+                    text: sampleText,
+                    voice_id: voiceId
+                })
             });
             
             if (!response.ok) {
-                throw new Error('Preview failed');
+                throw new Error('Failed to generate preview');
             }
             
-            const audioBlob = await response.blob();
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
             
-            audio.addEventListener('ended', () => {
-                btn.disabled = false;
-                btn.textContent = '▶️ Preview Voice';
+            if (this.currentAudio) {
+                this.currentAudio.pause();
+                URL.revokeObjectURL(this.currentAudio.src);
+            }
+            
+            this.currentAudio = new Audio(audioUrl);
+            this.currentAudio.play();
+            
+            this.currentAudio.addEventListener('ended', () => {
+                this.elements.previewVoiceBtn.textContent = '▶️ Preview Voice';
+                this.elements.previewVoiceBtn.disabled = false;
                 URL.revokeObjectURL(audioUrl);
             });
             
-            await audio.play();
-            btn.textContent = '⏸️ Playing...';
-            
         } catch (error) {
             console.error('Preview error:', error);
-            this.elements.previewVoiceBtn.disabled = false;
+            alert('Failed to play voice preview');
             this.elements.previewVoiceBtn.textContent = '▶️ Preview Voice';
-            alert('Failed to preview voice');
+            this.elements.previewVoiceBtn.disabled = false;
         }
     }
     
     async saveSettings() {
-        const voiceId = this.elements.voiceSelect.value;
-        
-        if (!voiceId) {
-            alert('Please select a voice');
-            return;
-        }
-        
         try {
-            console.log('💾 Saving voice preference:', voiceId);
+            const voiceId = this.elements.voiceSelect.value;
             
+            // Save voice preference using PUT
             const response = await fetch(`${this.API_BASE}/voice/preference`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ voice_id: voiceId })
+                body: JSON.stringify({
+                    voice_id: voiceId || null
+                })
             });
             
             if (!response.ok) {
-                const error = await response.json();
-                console.error('❌ Save failed:', error);
-                throw new Error(error.error || error.message || 'Failed to save preference');
+                throw new Error('Failed to save preference');
             }
             
-            const result = await response.json();
-            console.log('✅ Voice preference saved:', result);
-            
             this.userPreferredVoice = voiceId;
+            
+            // Save theme if theme manager exists
+            if (window.themeManager) {
+                window.themeManager.saveThemeFromSelector();
+            }
+            
             this.hideSettings();
             
-            // Show confirmation
-            alert('✅ Voice preference saved successfully!');
-            
         } catch (error) {
-            console.error('❌ Save settings error:', error);
-            alert(`Failed to save voice preference:\n\n${error.message}\n\nCheck console for details.`);
+            console.error('Save settings error:', error);
+            alert('Failed to save voice preference');
         }
     }
 }
