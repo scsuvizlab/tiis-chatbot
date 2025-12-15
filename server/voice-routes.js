@@ -149,21 +149,29 @@ router.get('/available', requireAuth, async (req, res) => {
 router.put('/preference', requireAuth, async (req, res) => {
   try {
     const { voice_id } = req.body;
+    
+    console.log(`🎤 Voice preference save request from ${req.user.email}:`, voice_id);
 
     if (!voice_id) {
+      console.log('❌ No voice_id provided');
       return res.status(400).json({ error: 'No voice_id provided' });
     }
 
     // Validate that voice exists in config
     const isValid = await voiceService.isValidVoiceId(voice_id);
     if (!isValid) {
-      return res.status(400).json({ error: 'Invalid voice ID' });
+      const config = await voiceService.getVoiceConfig();
+      const availableIds = config.voices.map(v => v.id).join(', ');
+      console.log(`❌ Invalid voice ID: ${voice_id}. Available: ${availableIds}`);
+      return res.status(400).json({ 
+        error: `Invalid voice ID: "${voice_id}". Available voices: ${availableIds}` 
+      });
     }
 
     // Update user's preference
     const user = await userManager.getUserByEmail(req.user.email);
     user.preferred_voice_id = voice_id;
-    await userManager.updateUser(user.email, user);
+    await userManager.updateUser(user);
 
     console.log(`✅ Updated voice preference for ${req.user.email} to ${voice_id}`);
 
@@ -173,7 +181,7 @@ router.put('/preference', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating voice preference:', error);
+    console.error('❌ Error updating voice preference:', error);
     res.status(500).json({
       error: 'Failed to update preference',
       message: error.message

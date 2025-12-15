@@ -115,20 +115,42 @@ class UserVoiceInterface {
         modal.className = 'modal hidden';
         modal.innerHTML = `
             <div class="modal-content">
-                <h2>🎤 Voice Settings</h2>
+                <h2>⚙️ Settings</h2>
                 
-                <div class="form-group">
-                    <label for="voice-select">Preferred Voice</label>
-                    <select id="voice-select" class="voice-select">
-                        <option value="">Loading voices...</option>
-                    </select>
-                    <small>Choose the voice you'd like to hear for AI responses</small>
+                <div class="settings-group" style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary);">Theme</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                        Choose your preferred color theme
+                    </p>
+                    <div class="theme-selector">
+                        <div class="theme-option" data-theme="light">
+                            <div class="theme-icon">☀️</div>
+                            <div class="theme-name">Light</div>
+                        </div>
+                        <div class="theme-option" data-theme="dark">
+                            <div class="theme-icon">🌙</div>
+                            <div class="theme-name">Dark</div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="voice-preview">
-                    <button id="preview-voice-btn" class="btn btn-secondary" disabled>
-                        ▶️ Preview Voice
-                    </button>
+                <div class="settings-group" style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary);">Voice Playback</h3>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="voice-select">Preferred Voice</label>
+                        <select id="voice-select" class="voice-select">
+                            <option value="">Loading voices...</option>
+                        </select>
+                        <small style="color: var(--text-secondary); font-size: 0.875rem; display: block; margin-top: 0.5rem;">
+                            Choose the voice you'd like to hear for AI responses
+                        </small>
+                    </div>
+                    
+                    <div class="voice-preview" style="margin-top: 1rem;">
+                        <button id="preview-voice-btn" class="btn btn-secondary" disabled>
+                            ▶️ Preview Voice
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="modal-actions">
@@ -526,6 +548,11 @@ class UserVoiceInterface {
             this.elements.previewVoiceBtn.disabled = false;
         }
         
+        // Update theme selector to show current theme
+        if (window.themeManager) {
+            window.themeManager.updateThemeSelectors();
+        }
+        
         this.elements.settingsModal.classList.remove('hidden');
     }
     
@@ -590,6 +617,8 @@ class UserVoiceInterface {
         }
         
         try {
+            console.log('💾 Saving voice preference:', voiceId);
+            
             const response = await fetch(`${this.API_BASE}/voice/preference`, {
                 method: 'PUT',
                 credentials: 'include',
@@ -598,18 +627,23 @@ class UserVoiceInterface {
             });
             
             if (!response.ok) {
-                throw new Error('Failed to save preference');
+                const error = await response.json();
+                console.error('❌ Save failed:', error);
+                throw new Error(error.error || error.message || 'Failed to save preference');
             }
+            
+            const result = await response.json();
+            console.log('✅ Voice preference saved:', result);
             
             this.userPreferredVoice = voiceId;
             this.hideSettings();
             
             // Show confirmation
-            alert('Voice preference saved!');
+            alert('✅ Voice preference saved successfully!');
             
         } catch (error) {
-            console.error('Save settings error:', error);
-            alert('Failed to save voice preference');
+            console.error('❌ Save settings error:', error);
+            alert(`Failed to save voice preference:\n\n${error.message}\n\nCheck console for details.`);
         }
     }
 }

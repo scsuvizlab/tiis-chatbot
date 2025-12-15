@@ -287,6 +287,9 @@ class AdminVoiceManager {
         this.renderVoicesList();
         this.updateDefaultVoiceSelect();
         this.hideVoiceForm();
+        
+        // Auto-save configuration after voice changes
+        this.saveConfiguration();
     }
     
     editVoice(index) {
@@ -311,6 +314,9 @@ class AdminVoiceManager {
         this.voiceConfig.voices.splice(index, 1);
         this.renderVoicesList();
         this.updateDefaultVoiceSelect();
+        
+        // Auto-save configuration after deletion
+        this.saveConfiguration();
     }
     
     moveVoice(index, direction) {

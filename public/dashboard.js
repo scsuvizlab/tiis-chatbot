@@ -74,6 +74,7 @@ function cacheElements() {
         conversationList: document.getElementById('conversation-list'),
         newTaskBtn: document.getElementById('new-task-btn'),
         logoutBtn: document.getElementById('logout-btn'),
+        userSettingsBtn: document.getElementById('user-settings-btn'),
         
         // Mobile menu
         mobileMenuToggle: document.getElementById('mobile-menu-toggle'),
@@ -185,6 +186,11 @@ function setupEventListeners() {
     // Onboarding summary modal
     elements.modifySummaryBtn.addEventListener('click', handleModifySummary);
     elements.approveSummaryBtn.addEventListener('click', handleApproveSummary);
+    
+    // User Settings - opens voice settings modal
+    if (elements.userSettingsBtn) {
+        elements.userSettingsBtn.addEventListener('click', showSettingsModal);
+    }
     
     // Start onboarding from welcome screen
     if (elements.startOnboardingBtn) {
@@ -724,6 +730,21 @@ async function handleDeleteConfirm() {
     } catch (error) {
         console.error('Error deleting conversation:', error);
         alert('Failed to delete conversation');
+    }
+}
+
+// User Settings Modal - opens voice settings which now includes theme
+function showSettingsModal() {
+    // Open the voice settings modal which now includes theme selection
+    if (window.userVoiceInterface) {
+        window.userVoiceInterface.showSettings();
+    }
+}
+
+function hideSettingsModal() {
+    // Close the voice settings modal
+    if (window.userVoiceInterface) {
+        window.userVoiceInterface.hideSettings();
     }
 }
 
