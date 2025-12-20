@@ -1,31 +1,28 @@
-// TIIS Admin Dashboard - Full Implementation with Voice Manager
-const API_BASE = '/api';
+// Admin Dashboard JavaScript - COMPLETE VERSION
+// Includes full Create User modal and View User conversations functionality
+
+const API_BASE = window.location.origin + '/api';
 
 // Global state
 let adminToken = null;
 let users = [];
 let stats = null;
-let currentReportData = null;
-let currentReportFilename = null;
-let selectedUserForAction = null;
-let voiceManager = null; // Voice manager instance
+let toolsManager = null;
+let currentViewingUser = null;
 
-// DOM Elements - will be set after DOM loads
+// DOM elements cache
 let elements = {};
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', init);
+// ============================================
+// INITIALIZATION
+// ============================================
 
-function init() {
-    console.log('=== ADMIN DASHBOARD INIT ===');
-    
-    // Cache DOM elements FIRST
+document.addEventListener('DOMContentLoaded', () => {
     cacheElements();
-    
-    // Set up event listeners
     setupEventListeners();
+    createModals(); // Create modals dynamically
     
-    // Check if already logged in (token in localStorage)
+    // Check if already logged in
     const savedToken = localStorage.getItem('admin_token');
     if (savedToken) {
         adminToken = savedToken;
@@ -33,153 +30,463 @@ function init() {
     } else {
         showLoginScreen();
     }
-}
+});
 
-// Cache DOM element references
 function cacheElements() {
     elements = {
-        // Screens
-        loginScreen: document.getElementById('admin-login-screen'),
-        dashboard: document.getElementById('admin-dashboard'),
-        
         // Login
-        loginForm: document.getElementById('admin-login-form'),
+        loginScreen: document.getElementById('login-screen'),
+        adminLoginForm: document.getElementById('admin-login-form'),
         adminPassword: document.getElementById('admin-password'),
-        loginError: document.getElementById('admin-login-error'),
+        loginError: document.getElementById('login-error'),
         
-        // Header
-        logoutBtn: document.getElementById('admin-logout-btn'),
+        // Navigation
+        usersTab: document.getElementById('users-tab'),
+        reportsTab: document.getElementById('reports-tab'),
+        toolsTab: document.getElementById('tools-tab'),
+        exportTab: document.getElementById('export-tab'),
+        logoutBtn: document.getElementById('logout-btn'),
+        
+        // Sections
+        usersSection: document.getElementById('users-section'),
+        reportsSection: document.getElementById('reports-section'),
+        toolsSection: document.getElementById('tools-section'),
+        exportSection: document.getElementById('export-section'),
         
         // Stats
         statTotalUsers: document.getElementById('stat-total-users'),
         statOnboarding: document.getElementById('stat-onboarding'),
-        statOnboardingPercent: document.getElementById('stat-onboarding-percent'),
         statTasks: document.getElementById('stat-tasks'),
         statMessages: document.getElementById('stat-messages'),
-        statStorage: document.getElementById('stat-storage'),
         
-        // Users table
-        usersTableBody: document.getElementById('users-table-body'),
+        // Users
         createUserBtn: document.getElementById('create-user-btn'),
-        
-        // Reports
-        generateCorpReportBtn: document.getElementById('generate-corp-report-btn'),
-        individualReportUser: document.getElementById('individual-report-user'),
-        generateIndividualReportBtn: document.getElementById('generate-individual-report-btn'),
+        usersTableContainer: document.getElementById('users-table-container'),
         
         // Export
         exportAllBtn: document.getElementById('export-all-btn'),
         
-        // Create User Modal
-        createUserModal: document.getElementById('create-user-modal'),
-        createUserForm: document.getElementById('create-user-form'),
-        newUserEmail: document.getElementById('new-user-email'),
-        newUserName: document.getElementById('new-user-name'),
-        newUserRole: document.getElementById('new-user-role'),
-        newUserPassword: document.getElementById('new-user-password'),
-        createUserError: document.getElementById('create-user-error'),
-        cancelCreateUserBtn: document.getElementById('cancel-create-user-btn'),
-        
-        // Reset Password Modal
-        resetPasswordModal: document.getElementById('reset-password-modal'),
-        resetPasswordForm: document.getElementById('reset-password-form'),
-        resetUserName: document.getElementById('reset-user-name'),
-        resetNewPassword: document.getElementById('reset-new-password'),
-        resetPasswordError: document.getElementById('reset-password-error'),
-        cancelResetPasswordBtn: document.getElementById('cancel-reset-password-btn'),
-        
-        // Delete User Modal
-        deleteUserModal: document.getElementById('delete-user-modal'),
-        deleteUserName: document.getElementById('delete-user-name'),
-        cancelDeleteUserBtn: document.getElementById('cancel-delete-user-btn'),
-        confirmDeleteUserBtn: document.getElementById('confirm-delete-user-btn'),
-        
-        // View Conversations Modal
-        viewConversationsModal: document.getElementById('view-conversations-modal'),
-        conversationsUserName: document.getElementById('conversations-user-name'),
-        conversationsList: document.getElementById('conversations-list'),
-        closeConversationsBtn: document.getElementById('close-conversations-btn'),
-        
-        // Report Preview Modal
-        reportPreviewModal: document.getElementById('report-preview-modal'),
-        reportPreviewTitle: document.getElementById('report-preview-title'),
-        reportPreviewContent: document.getElementById('report-preview-content'),
-        downloadReportBtn: document.getElementById('download-report-btn'),
-        closeReportBtn: document.getElementById('close-report-btn'),
-        
-        // User Credentials Modal
-        userCredentialsModal: document.getElementById('user-credentials-modal'),
-        credWebsite: document.getElementById('cred-website'),
-        credEmail: document.getElementById('cred-email'),
-        credPassword: document.getElementById('cred-password'),
-        copyCredentialsBtn: document.getElementById('copy-credentials-btn'),
-        closeCredentialsBtn: document.getElementById('close-credentials-btn')
+        // Tools
+        toolsContainer: document.getElementById('tools-container')
     };
 }
 
-// Set up all event listeners
 function setupEventListeners() {
     // Login
-    elements.loginForm.addEventListener('submit', handleLogin);
+    elements.adminLoginForm?.addEventListener('submit', handleLogin);
+    
+    // Navigation tabs
+    elements.usersTab?.addEventListener('click', () => showSection('users'));
+    elements.reportsTab?.addEventListener('click', () => showSection('reports'));
+    elements.toolsTab?.addEventListener('click', () => showSection('tools'));
+    elements.exportTab?.addEventListener('click', () => showSection('export'));
     
     // Logout
-    elements.logoutBtn.addEventListener('click', handleLogout);
-    
-    // Create user
-    elements.createUserBtn.addEventListener('click', showCreateUserModal);
-    elements.createUserForm.addEventListener('submit', handleCreateUser);
-    elements.cancelCreateUserBtn.addEventListener('click', hideCreateUserModal);
-    
-    // Reset password
-    elements.resetPasswordForm.addEventListener('submit', handleResetPassword);
-    elements.cancelResetPasswordBtn.addEventListener('click', hideResetPasswordModal);
-    
-    // Delete user
-    elements.cancelDeleteUserBtn.addEventListener('click', hideDeleteUserModal);
-    elements.confirmDeleteUserBtn.addEventListener('click', handleDeleteUser);
-    
-    // View conversations
-    elements.closeConversationsBtn.addEventListener('click', hideConversationsModal);
-    
-    // Reports
-    elements.generateCorpReportBtn.addEventListener('click', handleGenerateCorpReport);
-    elements.generateIndividualReportBtn.addEventListener('click', handleGenerateIndividualReport);
-    elements.downloadReportBtn.addEventListener('click', handleDownloadReport);
-    elements.closeReportBtn.addEventListener('click', hideReportModal);
+    elements.logoutBtn?.addEventListener('click', handleLogout);
     
     // Export
-    elements.exportAllBtn.addEventListener('click', handleExportAll);
+    elements.exportAllBtn?.addEventListener('click', handleExport);
     
-    // Credentials modal
-    elements.copyCredentialsBtn.addEventListener('click', handleCopyCredentials);
-    elements.closeCredentialsBtn.addEventListener('click', hideCredentialsModal);
+    // Create user
+    elements.createUserBtn?.addEventListener('click', showCreateUserModal);
 }
 
 // ============================================
-// LOGIN / LOGOUT
+// MODALS - Create dynamically
 // ============================================
 
-function showLoginScreen() {
-    elements.loginScreen.classList.remove('hidden');
-    elements.dashboard.classList.add('hidden');
+function createModals() {
+    // Create User Modal
+    const createUserModal = document.createElement('div');
+    createUserModal.id = 'create-user-modal';
+    createUserModal.className = 'modal hidden';
+    createUserModal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0;">Create New User</h2>
+                <button id="close-create-user" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">×</button>
+            </div>
+            
+            <form id="create-user-form">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name *</label>
+                    <input type="text" id="new-user-name" required 
+                           style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color);"
+                           placeholder="Sarah Johnson">
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email *</label>
+                    <input type="email" id="new-user-email" required 
+                           style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color);"
+                           placeholder="sarah@gsdc.org">
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Job Title *</label>
+                    <input type="text" id="new-user-role" required 
+                           style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color);"
+                           placeholder="Director of Community Engagement">
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Temporary Password *</label>
+                    <input type="password" id="new-user-password" required minlength="8"
+                           style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color);"
+                           placeholder="Min 8 characters">
+                    <small style="color: var(--text-secondary); font-size: 0.875rem;">User will be required to change on first login</small>
+                </div>
+                
+                <div id="create-user-error" class="hidden" style="color: var(--error-color); margin-bottom: 1rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px;"></div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" id="cancel-create-user" class="button-secondary">Cancel</button>
+                    <button type="submit" class="button-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(createUserModal);
+    
+    // View User Conversations Modal
+    const viewUserModal = document.createElement('div');
+    viewUserModal.id = 'view-user-modal';
+    viewUserModal.className = 'modal hidden';
+    viewUserModal.innerHTML = `
+        <div class="modal-content" style="max-width: 900px; max-height: 80vh;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 id="view-user-title" style="margin: 0;">User Conversations</h2>
+                <button id="close-view-user" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">×</button>
+            </div>
+            
+            <div id="view-user-content" style="overflow-y: auto; max-height: calc(80vh - 100px);"></div>
+        </div>
+    `;
+    document.body.appendChild(viewUserModal);
+    
+    // Setup modal event listeners
+    setupModalListeners();
 }
 
-function showDashboard() {
-    elements.loginScreen.classList.add('hidden');
-    elements.dashboard.classList.remove('hidden');
+function setupModalListeners() {
+    // Create User Modal
+    document.getElementById('close-create-user')?.addEventListener('click', hideCreateUserModal);
+    document.getElementById('cancel-create-user')?.addEventListener('click', hideCreateUserModal);
+    document.getElementById('create-user-form')?.addEventListener('submit', handleCreateUser);
     
-    // Initialize voice manager
-    if (!voiceManager) {
-        voiceManager = new AdminVoiceManager(adminToken);
+    // View User Modal
+    document.getElementById('close-view-user')?.addEventListener('click', hideViewUserModal);
+    
+    // Click outside to close
+    document.getElementById('create-user-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'create-user-modal') hideCreateUserModal();
+    });
+    
+    document.getElementById('view-user-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'view-user-modal') hideViewUserModal();
+    });
+}
+
+// ============================================
+// CREATE USER FUNCTIONALITY
+// ============================================
+
+function showCreateUserModal() {
+    const modal = document.getElementById('create-user-modal');
+    const form = document.getElementById('create-user-form');
+    const errorDiv = document.getElementById('create-user-error');
+    
+    // Reset form
+    form.reset();
+    errorDiv.classList.add('hidden');
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+function hideCreateUserModal() {
+    const modal = document.getElementById('create-user-modal');
+    modal.classList.add('hidden');
+}
+
+async function handleCreateUser(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('new-user-name').value;
+    const email = document.getElementById('new-user-email').value;
+    const role = document.getElementById('new-user-role').value;
+    const password = document.getElementById('new-user-password').value;
+    const errorDiv = document.getElementById('create-user-error');
+    
+    errorDiv.classList.add('hidden');
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/users`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, email, role, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            errorDiv.textContent = data.error || 'Failed to create user';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        // Success!
+        hideCreateUserModal();
+        
+        // Show success message
+        alert(`User created successfully!\n\nEmail: ${email}\nTemporary Password: ${password}\n\nUser will be required to change password on first login.`);
+        
+        // Reload users list
+        await loadDashboardData();
+        
+    } catch (error) {
+        console.error('Error creating user:', error);
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+// ============================================
+// VIEW USER FUNCTIONALITY
+// ============================================
+
+async function viewUserConversations(email) {
+    const modal = document.getElementById('view-user-modal');
+    const title = document.getElementById('view-user-title');
+    const content = document.getElementById('view-user-content');
+    
+    // Find user
+    const user = users.find(u => u.email === email);
+    if (!user) {
+        alert('User not found');
+        return;
     }
     
-    loadDashboardData();
+    currentViewingUser = email;
+    
+    // Update title
+    title.textContent = `${user.name} - Conversations`;
+    
+    // Show loading
+    content.innerHTML = `
+        <div style="text-align: center; padding: 3rem;">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+            <div>Loading conversations...</div>
+        </div>
+    `;
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    
+    try {
+        // Fetch user's conversations
+        const response = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(email)}/conversations`, {
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load conversations');
+        }
+        
+        const data = await response.json();
+        const conversations = data.conversations || [];
+        
+        // Render conversations
+        if (conversations.length === 0) {
+            content.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">📭</div>
+                    <div>No conversations yet</div>
+                    <div style="font-size: 0.875rem; margin-top: 0.5rem;">User hasn't started onboarding</div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div style="display: grid; gap: 1rem;">
+        `;
+        
+        conversations.forEach(conv => {
+            const icon = conv.type === 'onboarding' ? '🎯' : '📋';
+            const statusBadge = conv.status === 'complete' 
+                ? '<span style="background: var(--success-color); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">Complete</span>'
+                : '';
+            
+            const lastUpdated = formatDate(conv.last_updated);
+            
+            html += `
+                <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; cursor: pointer; transition: all 0.2s;"
+                     onmouseover="this.style.borderColor='var(--primary-color)'"
+                     onmouseout="this.style.borderColor='var(--border-color)'"
+                     onclick="viewConversationDetail('${email}', '${conv.conversation_id}')">
+                    <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.75rem;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.5rem;">${icon}</span>
+                                <strong style="font-size: 1.125rem;">${conv.title}</strong>
+                                ${statusBadge}
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                                ${conv.message_count} messages • Last updated ${lastUpdated}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${conv.summary ? `
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer; color: var(--primary-color); font-size: 0.875rem;">View Summary</summary>
+                            <div style="margin-top: 0.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.875rem; white-space: pre-wrap;">
+                                ${conv.summary.substring(0, 500)}${conv.summary.length > 500 ? '...' : ''}
+                            </div>
+                        </details>
+                    ` : ''}
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        content.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+        content.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--error-color);">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">❌</div>
+                <div>Failed to load conversations</div>
+                <div style="font-size: 0.875rem; margin-top: 0.5rem;">${error.message}</div>
+            </div>
+        `;
+    }
 }
+
+async function viewConversationDetail(email, conversationId) {
+    const content = document.getElementById('view-user-content');
+    
+    // Show loading
+    content.innerHTML = `
+        <div style="text-align: center; padding: 3rem;">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+            <div>Loading conversation messages...</div>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(email)}/conversations/${conversationId}`, {
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load conversation');
+        }
+        
+        const data = await response.json();
+        const conversation = data.conversation;
+        
+        // Render full conversation
+        let html = `
+            <div>
+                <button onclick="viewUserConversations('${email}')" 
+                        style="margin-bottom: 1rem; padding: 0.5rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                    ← Back to All Conversations
+                </button>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h3>${conversation.title}</h3>
+                    <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                        ${conversation.message_count} messages • 
+                        Created ${formatDate(conversation.created_at)} • 
+                        Last updated ${formatDate(conversation.last_updated)}
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+        `;
+        
+        conversation.messages.forEach(msg => {
+            const isUser = msg.role === 'user';
+            const bgColor = isUser ? 'var(--primary-color)' : 'var(--card-bg)';
+            const textColor = isUser ? 'white' : 'var(--text-primary)';
+            const alignment = isUser ? 'flex-end' : 'flex-start';
+            
+            let content = '';
+            if (Array.isArray(msg.content)) {
+                msg.content.forEach(item => {
+                    if (item.type === 'text') {
+                        content += item.text;
+                    } else if (item.type === 'image') {
+                        content += `<div style="margin: 0.5rem 0;">[Image attachment]</div>`;
+                    } else if (item.type === 'document') {
+                        content += `<div style="margin: 0.5rem 0;">[Document attachment]</div>`;
+                    }
+                });
+            } else {
+                content = msg.content;
+            }
+            
+            html += `
+                <div style="display: flex; justify-content: ${alignment};">
+                    <div style="max-width: 70%; background: ${bgColor}; color: ${textColor}; padding: 1rem; border-radius: 8px;">
+                        <div style="white-space: pre-wrap; word-wrap: break-word;">${content}</div>
+                        <div style="font-size: 0.75rem; margin-top: 0.5rem; opacity: 0.7;">
+                            ${formatDate(msg.timestamp)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        content.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading conversation detail:', error);
+        content.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--error-color);">
+                <button onclick="viewUserConversations('${email}')" 
+                        style="margin-bottom: 1rem; padding: 0.5rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                    ← Back to All Conversations
+                </button>
+                <div style="font-size: 2rem; margin-bottom: 1rem;">❌</div>
+                <div>Failed to load conversation</div>
+                <div style="font-size: 0.875rem; margin-top: 0.5rem;">${error.message}</div>
+            </div>
+        `;
+    }
+}
+
+function hideViewUserModal() {
+    const modal = document.getElementById('view-user-modal');
+    modal.classList.add('hidden');
+    currentViewingUser = null;
+}
+
+// ============================================
+// AUTHENTICATION
+// ============================================
 
 async function handleLogin(e) {
     e.preventDefault();
     
     const password = elements.adminPassword.value;
+    elements.loginError.classList.add('hidden');
     
     try {
         const response = await fetch(`${API_BASE}/admin/login`, {
@@ -210,13 +517,61 @@ async function handleLogin(e) {
 
 function handleLogout() {
     adminToken = null;
-    voiceManager = null;
+    toolsManager = null;
+    currentViewingUser = null;
     localStorage.removeItem('admin_token');
     showLoginScreen();
 }
 
+function showLoginScreen() {
+    hideAllSections();
+    elements.loginScreen?.classList.add('active');
+}
+
+function showDashboard() {
+    elements.loginScreen?.classList.remove('active');
+    showSection('users');
+    loadDashboardData();
+}
+
 // ============================================
-// LOAD DASHBOARD DATA
+// NAVIGATION
+// ============================================
+
+function hideAllSections() {
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    document.querySelectorAll('.tab-button').forEach(tab => {
+        tab.classList.remove('active');
+    });
+}
+
+async function showSection(sectionName) {
+    hideAllSections();
+    
+    const section = document.getElementById(`${sectionName}-section`);
+    const tab = document.getElementById(`${sectionName}-tab`);
+    
+    if (section) section.classList.add('active');
+    if (tab) tab.classList.add('active');
+    
+    switch(sectionName) {
+        case 'users':
+            await loadDashboardData();
+            break;
+        case 'tools':
+            await loadToolsSection();
+            break;
+        case 'reports':
+        case 'export':
+            break;
+    }
+}
+
+// ============================================
+// USER MANAGEMENT
 // ============================================
 
 async function loadDashboardData() {
@@ -237,7 +592,6 @@ async function loadDashboardData() {
         
         updateStatsDisplay();
         renderUsersTable();
-        populateUserSelectors();
         
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -245,433 +599,124 @@ async function loadDashboardData() {
     }
 }
 
-// Update stats cards
 function updateStatsDisplay() {
     if (!stats) return;
     
     elements.statTotalUsers.textContent = stats.total_users;
     elements.statOnboarding.textContent = `${stats.onboarding_complete}/${stats.total_users}`;
-    
-    const onboardingPercent = stats.total_users > 0 
-        ? Math.round((stats.onboarding_complete / stats.total_users) * 100)
-        : 0;
-    elements.statOnboardingPercent.textContent = `${onboardingPercent}%`;
-    
     elements.statTasks.textContent = stats.total_tasks;
     elements.statMessages.textContent = stats.total_messages;
-    elements.statStorage.textContent = `${stats.total_storage_mb.toFixed(1)} MB`;
 }
 
-// Render users table
 function renderUsersTable() {
+    if (!elements.usersTableContainer) return;
+    
     if (users.length === 0) {
-        elements.usersTableBody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                    No users yet. Create your first user to get started.
+        elements.usersTableContainer.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                No users yet. Create your first user to get started.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--border-color);">
+                    <th style="text-align: left; padding: 1rem;">User</th>
+                    <th style="text-align: left; padding: 1rem;">Role</th>
+                    <th style="text-align: center; padding: 1rem;">Status</th>
+                    <th style="text-align: center; padding: 1rem;">Tasks</th>
+                    <th style="text-align: center; padding: 1rem;">Messages</th>
+                    <th style="text-align: center; padding: 1rem;">Storage</th>
+                    <th style="text-align: center; padding: 1rem;">Last Active</th>
+                    <th style="text-align: center; padding: 1rem;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    users.forEach(user => {
+        const statusBadge = user.onboarding_complete
+            ? '<span style="background: var(--success-color); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">Complete</span>'
+            : '<span style="background: var(--warning-color); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">Incomplete</span>';
+        
+        const lastActive = user.last_login ? formatDate(user.last_login) : 'Never';
+        
+        html += `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 1rem;">
+                    <div style="font-weight: 500;">${user.name}</div>
+                    <div style="font-size: 0.875rem; color: var(--text-secondary);">${user.email}</div>
+                </td>
+                <td style="padding: 1rem;">${user.role}</td>
+                <td style="padding: 1rem; text-align: center;">${statusBadge}</td>
+                <td style="padding: 1rem; text-align: center;">${user.task_count}</td>
+                <td style="padding: 1rem; text-align: center;">${user.total_messages}</td>
+                <td style="padding: 1rem; text-align: center;">${user.storage_used_mb.toFixed(1)} MB</td>
+                <td style="padding: 1rem; text-align: center;">${lastActive}</td>
+                <td style="padding: 1rem; text-align: center;">
+                    <button class="button-secondary" onclick="viewUserConversations('${user.email}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                        👁️ View
+                    </button>
                 </td>
             </tr>
         `;
-        return;
-    }
+    });
     
-    elements.usersTableBody.innerHTML = '';
+    html += `
+            </tbody>
+        </table>
+    `;
     
-    users.forEach(user => {
-        const row = document.createElement('tr');
-        
-        const statusBadge = user.onboarding_complete
-            ? '<span class="badge badge-success">Complete</span>'
-            : '<span class="badge badge-warning">Pending</span>';
-        
-        const lastActive = user.last_active 
-            ? getTimeAgo(user.last_active)
-            : 'Never';
-        
-        row.innerHTML = `
-            <td>
-                <div class="user-name">${user.name}</div>
-                <div class="user-email">${user.email}</div>
-            </td>
-            <td>${user.role}</td>
-            <td>${statusBadge}</td>
-            <td>${user.task_count}</td>
-            <td>${user.total_messages}</td>
-            <td>${user.storage_used_mb.toFixed(1)} MB</td>
-            <td>${lastActive}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-secondary btn-icon-small view-conversations-btn" data-email="${user.email}" data-name="${user.name}">
-                        👁️ View
-                    </button>
-                    <button class="btn btn-secondary btn-icon-small reset-password-btn" data-email="${user.email}" data-name="${user.name}">
-                        🔑 Reset
-                    </button>
-                    <button class="btn btn-danger btn-icon-small delete-user-btn" data-email="${user.email}" data-name="${user.name}">
-                        🗑️
-                    </button>
+    elements.usersTableContainer.innerHTML = html;
+}
+
+// ============================================
+// TOOLS SECTION
+// ============================================
+
+async function loadToolsSection() {
+    if (!elements.toolsContainer) return;
+    
+    if (!toolsManager) {
+        try {
+            elements.toolsContainer.innerHTML = `
+                <div style="text-align: center; padding: 3rem;">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🔧</div>
+                    <div>Loading tools data...</div>
                 </div>
-            </td>
-        `;
-        
-        // Add event listeners to action buttons
-        row.querySelector('.view-conversations-btn').addEventListener('click', (e) => {
-            handleViewConversations(e.target.dataset.email, e.target.dataset.name);
-        });
-        
-        row.querySelector('.reset-password-btn').addEventListener('click', (e) => {
-            showResetPasswordModal(e.target.dataset.email, e.target.dataset.name);
-        });
-        
-        row.querySelector('.delete-user-btn').addEventListener('click', (e) => {
-            showDeleteUserModal(e.target.dataset.email, e.target.dataset.name);
-        });
-        
-        elements.usersTableBody.appendChild(row);
-    });
-}
-
-// Populate user selectors in report section
-function populateUserSelectors() {
-    elements.individualReportUser.innerHTML = '<option value="">Select a user...</option>';
-    
-    users.forEach(user => {
-        const option = document.createElement('option');
-        option.value = user.email;
-        option.textContent = `${user.name} (${user.email})`;
-        elements.individualReportUser.appendChild(option);
-    });
-}
-
-// ============================================
-// CREATE USER
-// ============================================
-
-function showCreateUserModal() {
-    elements.createUserModal.classList.remove('hidden');
-    elements.createUserForm.reset();
-    elements.createUserError.classList.add('hidden');
-}
-
-function hideCreateUserModal() {
-    elements.createUserModal.classList.add('hidden');
-}
-
-async function handleCreateUser(e) {
-    e.preventDefault();
-    
-    const email = elements.newUserEmail.value;
-    const name = elements.newUserName.value;
-    const role = elements.newUserRole.value;
-    const temp_password = elements.newUserPassword.value;
-    
-    try {
-        // CORRECTED ENDPOINT URL
-        const response = await fetch(`${API_BASE}/admin/users/create`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email, name, role, temp_password })
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to create user');
-        }
-        
-        const data = await response.json();
-        
-        hideCreateUserModal();
-        showCredentialsModal(email, temp_password);
-        loadDashboardData();
-        
-    } catch (error) {
-        console.error('Error creating user:', error);
-        elements.createUserError.textContent = error.message;
-        elements.createUserError.classList.remove('hidden');
-    }
-}
-
-function showCredentialsModal(email, password) {
-    elements.credWebsite.value = window.location.origin;
-    elements.credEmail.value = email;
-    elements.credPassword.value = password;
-    elements.userCredentialsModal.classList.remove('hidden');
-}
-
-function hideCredentialsModal() {
-    elements.userCredentialsModal.classList.add('hidden');
-}
-
-function handleCopyCredentials() {
-    const text = `Website: ${elements.credWebsite.value}\nEmail: ${elements.credEmail.value}\nPassword: ${elements.credPassword.value}`;
-    navigator.clipboard.writeText(text);
-    
-    const btn = elements.copyCredentialsBtn;
-    const originalText = btn.textContent;
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => {
-        btn.textContent = originalText;
-    }, 2000);
-}
-
-// ============================================
-// RESET PASSWORD
-// ============================================
-
-function showResetPasswordModal(email, name) {
-    selectedUserForAction = email;
-    elements.resetUserName.textContent = `Reset password for ${name}`;
-    elements.resetPasswordModal.classList.remove('hidden');
-    elements.resetPasswordForm.reset();
-    elements.resetPasswordError.classList.add('hidden');
-}
-
-function hideResetPasswordModal() {
-    elements.resetPasswordModal.classList.add('hidden');
-    selectedUserForAction = null;
-}
-
-async function handleResetPassword(e) {
-    e.preventDefault();
-    
-    const new_password = elements.resetNewPassword.value;
-    
-    try {
-        // CORRECTED ENDPOINT URL
-        const response = await fetch(`${API_BASE}/admin/users/reset-password`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                email: selectedUserForAction, 
-                new_password
-            })
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to reset password');
-        }
-        
-        hideResetPasswordModal();
-        alert('Password reset successfully');
-        
-    } catch (error) {
-        console.error('Error resetting password:', error);
-        elements.resetPasswordError.textContent = error.message;
-        elements.resetPasswordError.classList.remove('hidden');
-    }
-}
-
-// ============================================
-// DELETE USER
-// ============================================
-
-function showDeleteUserModal(email, name) {
-    selectedUserForAction = email;
-    elements.deleteUserName.textContent = name;
-    elements.deleteUserModal.classList.remove('hidden');
-}
-
-function hideDeleteUserModal() {
-    elements.deleteUserModal.classList.add('hidden');
-    selectedUserForAction = null;
-}
-
-async function handleDeleteUser() {
-    try {
-        // CORRECTED ENDPOINT URL
-        const response = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(selectedUserForAction)}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to delete user');
-        }
-        
-        hideDeleteUserModal();
-        loadDashboardData();
-        
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Failed to delete user: ' + error.message);
-    }
-}
-
-// ============================================
-// VIEW CONVERSATIONS
-// ============================================
-
-async function handleViewConversations(email, name) {
-    elements.conversationsUserName.textContent = name;
-    elements.conversationsList.innerHTML = '<p style="text-align: center; padding: 2rem;">Loading...</p>';
-    elements.viewConversationsModal.classList.remove('hidden');
-    
-    try {
-        const response = await fetch(`${API_BASE}/admin/conversations/${encodeURIComponent(email)}`, {
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to load conversations');
-        }
-        
-        const data = await response.json();
-        
-        if (data.conversations.length === 0) {
-            elements.conversationsList.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-secondary);">No conversations yet.</p>';
-            return;
-        }
-        
-        elements.conversationsList.innerHTML = '';
-        
-        data.conversations.forEach(conv => {
-            const div = document.createElement('div');
-            div.className = 'conversation-item-admin';
-            
-            const status = conv.status === 'complete' ? '✓' : '⋯';
-            const messageCount = conv.message_count || 0;
-            
-            div.innerHTML = `
-                <h4>${status} ${conv.title}</h4>
-                <p>${messageCount} messages • Updated ${getTimeAgo(conv.updated_at)}</p>
             `;
             
-            elements.conversationsList.appendChild(div);
-        });
-        
-    } catch (error) {
-        console.error('Error loading conversations:', error);
-        elements.conversationsList.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--danger-color);">Failed to load conversations</p>';
-    }
-}
-
-function hideConversationsModal() {
-    elements.viewConversationsModal.classList.add('hidden');
-}
-
-// ============================================
-// REPORTS
-// ============================================
-
-async function handleGenerateCorpReport() {
-    elements.generateCorpReportBtn.disabled = true;
-    elements.generateCorpReportBtn.textContent = 'Generating...';
-    
-    try {
-        const response = await fetch(`${API_BASE}/admin/analyze/corporation`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to generate report');
+            toolsManager = new AdminToolsManager(API_BASE, adminToken);
+            await toolsManager.initialize('tools-container');
+            
+            console.log('✅ Tools manager initialized successfully');
+            
+        } catch (error) {
+            console.error('❌ Failed to initialize tools manager:', error);
+            elements.toolsContainer.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--error-color);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">❌</div>
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Failed to load tools data</div>
+                    <div style="font-size: 0.875rem;">${error.message}</div>
+                    <button class="button-primary" onclick="loadToolsSection()" style="margin-top: 1rem;">
+                        Try Again
+                    </button>
+                </div>
+            `;
         }
-        
-        const data = await response.json();
-        currentReportData = data.analysis;
-        currentReportFilename = `Corporation_Report_${new Date().toISOString().split('T')[0]}.md`;
-        
-        showReportModal('Corporation-Wide Analysis', data.analysis);
-        
-    } catch (error) {
-        console.error('Error generating report:', error);
-        alert('Failed to generate report: ' + error.message);
-    } finally {
-        elements.generateCorpReportBtn.disabled = false;
-        elements.generateCorpReportBtn.textContent = '🏢 Generate Corporation Report';
     }
-}
-
-async function handleGenerateIndividualReport() {
-    const email = elements.individualReportUser.value;
-    
-    if (!email) {
-        alert('Please select a user');
-        return;
-    }
-    
-    const user = users.find(u => u.email === email);
-    
-    elements.generateIndividualReportBtn.disabled = true;
-    elements.generateIndividualReportBtn.textContent = 'Generating...';
-    
-    try {
-        const response = await fetch(`${API_BASE}/admin/analyze/user/${email}`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to generate report');
-        }
-        
-        const data = await response.json();
-        currentReportData = data.analysis;
-        currentReportFilename = `${user.name.replace(/\s+/g, '_')}_Individual_Report_${new Date().toISOString().split('T')[0]}.md`;
-        
-        showReportModal(`Individual Report: ${user.name}`, data.analysis);
-        
-    } catch (error) {
-        console.error('Error generating report:', error);
-        alert('Failed to generate report: ' + error.message);
-    } finally {
-        elements.generateIndividualReportBtn.disabled = false;
-        elements.generateIndividualReportBtn.textContent = '👤 Generate Individual Report';
-    }
-}
-
-function showReportModal(title, content) {
-    elements.reportPreviewTitle.textContent = title;
-    elements.reportPreviewContent.textContent = content;
-    elements.reportPreviewModal.classList.remove('hidden');
-}
-
-function hideReportModal() {
-    elements.reportPreviewModal.classList.add('hidden');
-}
-
-function handleDownloadReport() {
-    if (!currentReportData || !currentReportFilename) return;
-    
-    const blob = new Blob([currentReportData], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = currentReportFilename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
 }
 
 // ============================================
-// EXPORT DATA
+// DATA EXPORT
 // ============================================
 
-async function handleExportAll() {
-    elements.exportAllBtn.disabled = true;
-    elements.exportAllBtn.textContent = 'Exporting...';
-    
+async function handleExport() {
     try {
-        const response = await fetch(`${API_BASE}/admin/export/all`, {
+        const response = await fetch(`${API_BASE}/admin/export`, {
             headers: {
                 'Authorization': `Bearer ${adminToken}`
             }
@@ -683,7 +728,6 @@ async function handleExportAll() {
         
         const data = await response.json();
         
-        // Download as JSON
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -694,31 +738,40 @@ async function handleExportAll() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
+        console.log('✅ Data exported successfully');
+        
     } catch (error) {
-        console.error('Error exporting data:', error);
-        alert('Failed to export data');
-    } finally {
-        elements.exportAllBtn.disabled = false;
-        elements.exportAllBtn.textContent = '📥 Export All Data (JSON)';
+        console.error('Export error:', error);
+        alert('Failed to export data: ' + error.message);
     }
 }
 
 // ============================================
-// UTILITIES
+// HELPER FUNCTIONS
 // ============================================
 
-function getTimeAgo(timestamp) {
+function formatDate(dateString) {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
     const now = new Date();
-    const then = new Date(timestamp);
-    const diffMs = now - then;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+    const diff = now - date;
     
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
     
-    return then.toLocaleDateString();
+    if (days > 7) return date.toLocaleDateString();
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return 'Just now';
 }
+
+// Make functions globally accessible
+window.showSection = showSection;
+window.viewUserConversations = viewUserConversations;
+window.viewConversationDetail = viewConversationDetail;
+window.handleLogout = handleLogout;
+window.loadToolsSection = loadToolsSection;
+window.showCreateUserModal = showCreateUserModal;

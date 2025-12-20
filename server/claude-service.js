@@ -1,3 +1,4 @@
+// Claude Service - Fixed message formatting
 const Anthropic = require('@anthropic-ai/sdk');
 const config = require('./config');
 
@@ -10,22 +11,18 @@ const MAX_TOKENS = 3000;
 
 /**
  * Send message in onboarding conversation
- * @param {Array} conversationHistory - Array of {role, content} messages
- * @param {string} userMessage - New user message
- * @param {string} userEmail - Optional user email for personalized context
+ * @param {Array} messages - Array of {role, content} messages (already formatted, no message_id)
+ * @param {string} userEmail - User email for personalized context
  * @returns {Promise<string>} Claude's response
  */
-async function sendOnboardingMessage(conversationHistory, userMessage, userEmail = null) {
-  const messages = [
-    ...conversationHistory,
-    { role: 'user', content: userMessage }
-  ];
+async function sendOnboardingMessage(messages, userEmail = null) {
+  console.log(`[Claude Service] Sending ${messages.length} messages to Claude for onboarding`);
   
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
     system: config.getOnboardingSystemPrompt(userEmail),
-    messages: messages
+    messages: messages // Already formatted with only role and content
   });
   
   return response.content[0].text;
@@ -33,22 +30,18 @@ async function sendOnboardingMessage(conversationHistory, userMessage, userEmail
 
 /**
  * Send message in task conversation
- * @param {Array} conversationHistory - Array of {role, content} messages
- * @param {string} userMessage - New user message
- * @param {string} onboardingSummary - User's onboarding summary for context
+ * @param {Array} messages - Array of {role, content} messages (already formatted)
+ * @param {string} userEmail - User email for context
  * @returns {Promise<string>} Claude's response
  */
-async function sendTaskMessage(conversationHistory, userMessage, onboardingSummary) {
-  const messages = [
-    ...conversationHistory,
-    { role: 'user', content: userMessage }
-  ];
+async function sendTaskMessage(messages, userEmail = null) {
+  console.log(`[Claude Service] Sending ${messages.length} messages to Claude for task`);
   
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system: config.getTaskSystemPrompt(onboardingSummary),
-    messages: messages
+    system: config.getTaskSystemPrompt(),
+    messages: messages // Already formatted with only role and content
   });
   
   return response.content[0].text;
@@ -68,67 +61,15 @@ async function extractTaskTitle(userMessage) {
 
 User message: "${userMessage}"
 
-Respond with ONLY the title, nothing else.
-
-Examples:
-"I'm documenting invoice reconciliation" → Invoice Reconciliation
-"Let me tell you about our grant reporting process" → Grant Reporting Process
-"I want to describe how I handle business inquiries" → Business Inquiry Handling
-"This is about the monthly board meeting prep" → Monthly Board Meeting Prep
-
-Now extract the title:`;
+Respond with ONLY the title, nothing else.`;
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 50,
+    max_tokens: 100,
     messages: [{ role: 'user', content: prompt }]
   });
-  
-  let title = response.content[0].text.trim();
-  
-  // Remove quotes if present
-  title = title.replace(/^["']|["']$/g, '');
-  
-  // Truncate if too long
-  if (title.length > 50) {
-    title = title.substring(0, 47) + '...';
-  }
-  
-  // Fallback if extraction failed
-  if (!title || title.length < 3) {
-    const timestamp = new Date().toLocaleString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-    title = `Task - ${timestamp}`;
-  }
-  
-  return title;
-}
 
-/**
- * Format conversation with attachments for Claude
- * @param {Array} messages - Messages with potential attachments
- * @returns {Array} Formatted messages for Claude API
- */
-function formatMessagesWithAttachments(messages) {
-  return messages.map(msg => {
-    if (msg.role === 'user' && msg.content && Array.isArray(msg.content)) {
-      // Message has attachments
-      return {
-        role: 'user',
-        content: msg.content // Already in Claude format
-      };
-    } else {
-      // Simple text message
-      return {
-        role: msg.role,
-        content: typeof msg.content === 'string' ? msg.content : msg.content[0].text
-      };
-    }
-  });
+  return response.content[0].text.trim();
 }
 
 /**
@@ -141,7 +82,7 @@ async function generateCorporationAnalysis(allConversations) {
   
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 8000, // Longer for comprehensive analysis
+    max_tokens: 8000,
     messages: [{ role: 'user', content: prompt }]
   });
   
@@ -169,7 +110,6 @@ module.exports = {
   sendOnboardingMessage,
   sendTaskMessage,
   extractTaskTitle,
-  formatMessagesWithAttachments,
   generateCorporationAnalysis,
   generateIndividualAnalysis
 };

@@ -4,678 +4,218 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TIIS Admin Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="voice-management-styles.css">
+    <link rel="stylesheet" href="/styles.css">
     <style>
         /* Admin-specific styles */
         .admin-container {
+            display: flex;
             min-height: 100vh;
-            background: var(--bg-secondary);
-        }
-
-        .admin-header {
             background: var(--bg-primary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
-
-        .admin-header h1 {
-            font-size: 1.5rem;
-            color: var(--primary-color);
+        
+        .admin-sidebar {
+            width: 250px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 2rem 1rem;
         }
-
-        .header-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .admin-content {
-            max-width: 1400px;
-            margin: 0 auto;
+        
+        .admin-main {
+            flex: 1;
             padding: 2rem;
+            overflow-y: auto;
         }
-
+        
+        .tab-button {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            text-align: left;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        
+        .tab-button:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .tab-button.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
+            gap: 1rem;
             margin-bottom: 2rem;
         }
-
+        
         .stat-card {
-            background: var(--bg-primary);
+            background: var(--card-bg);
             padding: 1.5rem;
             border-radius: 8px;
-            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
         }
-
+        
         .stat-label {
-            color: var(--text-secondary);
             font-size: 0.875rem;
+            color: var(--text-secondary);
             margin-bottom: 0.5rem;
         }
-
+        
         .stat-value {
             font-size: 2rem;
-            font-weight: 700;
+            font-weight: 600;
             color: var(--text-primary);
         }
-
-        .stat-subtext {
-            color: var(--text-muted);
-            font-size: 0.8125rem;
-            margin-top: 0.25rem;
-        }
-
-        .section {
-            background: var(--bg-primary);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow);
-            margin-bottom: 2rem;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .users-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .users-table th {
-            text-align: left;
-            padding: 0.75rem;
-            background: var(--bg-secondary);
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .users-table td {
-            padding: 1rem 0.75rem;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .users-table tr:hover {
-            background: var(--bg-hover);
-        }
-
-        .user-name {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .user-email {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .badge-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .btn-icon-small {
-            padding: 0.375rem 0.625rem;
-            font-size: 0.8125rem;
-        }
-
-        .report-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-        }
-
-        .report-box {
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1.5rem;
-        }
-
-        .report-box h3 {
-            margin-bottom: 0.75rem;
-            font-size: 1.125rem;
-        }
-
-        .report-box p {
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-            font-size: 0.9375rem;
-        }
-
-        .user-selector {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            font-size: 1rem;
-        }
-
-        .modal-large-content {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        .conversation-item-admin {
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            margin-bottom: 0.5rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .conversation-item-admin:hover {
-            background: var(--bg-hover);
-        }
-
-        .conversation-item-admin h4 {
-            margin-bottom: 0.25rem;
-            font-size: 1rem;
-        }
-
-        .conversation-item-admin p {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin: 0;
-        }
-
-        .report-preview {
-            background: var(--bg-secondary);
-            padding: 1.5rem;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        @media (max-width: 768px) {
-            .admin-content {
-                padding: 1rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .report-section {
-                grid-template-columns: 1fr;
-            }
-
-            .users-table {
-                font-size: 0.875rem;
-            }
-
-            .users-table th,
-            .users-table td {
-                padding: 0.5rem;
-            }
-
-            .header-actions {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
+        
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
-    <div id="admin-login-screen" class="login-container">
-        <div class="logo-section">
-            <h1>TIIS Admin</h1>
-            <p class="tagline">Administration Dashboard</p>
-        </div>
-
-        <div class="auth-form">
-            <h2>Admin Login</h2>
-            <p class="form-description">Enter admin password to continue</p>
+    <div class="admin-container">
+        <!-- Sidebar Navigation -->
+        <div class="admin-sidebar">
+            <h2 style="margin-bottom: 2rem; color: var(--text-primary);">TIIS Admin</h2>
             
-            <form id="admin-login-form">
-                <div class="form-group">
-                    <label for="admin-password">Password</label>
-                    <input 
-                        type="password" 
-                        id="admin-password" 
-                        name="password" 
-                        required 
-                        autofocus
-                        placeholder="Enter admin password"
-                    >
-                </div>
-                
-                <div id="admin-login-error" class="error-message hidden"></div>
-                
-                <button type="submit" class="btn btn-primary btn-full">
-                    Sign In
-                </button>
-            </form>
+            <button id="users-tab" class="tab-button active" onclick="showSection('users')">
+                👥 User Management
+            </button>
+            
+            <button id="reports-tab" class="tab-button" onclick="showSection('reports')">
+                📊 Reports
+            </button>
+            
+            <!-- ⭐ NEW: Tools & Platforms Tab -->
+            <button id="tools-tab" class="tab-button" onclick="showSection('tools')">
+                🔧 Tools & Platforms
+            </button>
+            
+            <button id="export-tab" class="tab-button" onclick="showSection('export')">
+                💾 Data Export
+            </button>
+            
+            <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border-color);">
+            
+            <button id="logout-btn" class="tab-button" onclick="handleLogout()">
+                🚪 Logout
+            </button>
         </div>
-
-        <div class="footer-info">
-            <p>TrueNorth AI Services LLC</p>
-        </div>
-    </div>
-
-    <!-- Main Admin Dashboard -->
-    <div id="admin-dashboard" class="admin-container hidden">
-        <!-- Header -->
-        <header class="admin-header">
-            <h1>🛠️ TIIS Admin Dashboard</h1>
-            <div class="header-actions">
-                <button id="voice-management-btn" class="voice-management-btn">
-                    Voice Settings
-                </button>
-                <button id="admin-logout-btn" class="btn btn-secondary">Logout</button>
-            </div>
-        </header>
-
-        <div class="admin-content">
-            <!-- Stats Overview -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Total Users</div>
-                    <div class="stat-value" id="stat-total-users">0</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-label">Onboarding Complete</div>
-                    <div class="stat-value" id="stat-onboarding">0/0</div>
-                    <div class="stat-subtext" id="stat-onboarding-percent">0%</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-label">Total Tasks</div>
-                    <div class="stat-value" id="stat-tasks">0</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-label">Total Messages</div>
-                    <div class="stat-value" id="stat-messages">0</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-label">Storage Used</div>
-                    <div class="stat-value" id="stat-storage">0 MB</div>
-                </div>
-            </div>
-
-            <!-- User Management -->
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">👥 User Management</h2>
-                    <button id="create-user-btn" class="btn btn-primary">
-                        ➕ Create User
-                    </button>
-                </div>
-                
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Tasks</th>
-                            <th>Messages</th>
-                            <th>Storage</th>
-                            <th>Last Active</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-table-body">
-                        <tr>
-                            <td colspan="8" style="text-align: center; padding: 2rem;">
-                                Loading users...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Reports -->
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">📊 Analysis & Reports</h2>
-                </div>
-                
-                <div class="report-section">
-                    <div class="report-box">
-                        <h3>Corporation-Wide Analysis</h3>
-                        <p>Generate comprehensive analysis across all employees</p>
-                        <button id="generate-corp-report-btn" class="btn btn-primary btn-full">
-                            🏢 Generate Corporation Report
-                        </button>
-                    </div>
+        
+        <!-- Main Content Area -->
+        <div class="admin-main">
+            <!-- Login Screen -->
+            <div id="login-screen" class="section active">
+                <div style="max-width: 400px; margin: 4rem auto;">
+                    <h1 style="margin-bottom: 2rem;">Admin Login</h1>
                     
-                    <div class="report-box">
-                        <h3>Individual Analysis</h3>
-                        <p>Generate detailed report for a specific employee</p>
-                        <select id="individual-report-user" class="user-selector">
-                            <option value="">Select a user...</option>
-                        </select>
-                        <button id="generate-individual-report-btn" class="btn btn-primary btn-full">
-                            👤 Generate Individual Report
+                    <form id="admin-login-form">
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem;">Admin Password</label>
+                            <input type="password" id="admin-password" required 
+                                   style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                        </div>
+                        
+                        <div id="login-error" class="hidden" style="color: var(--error-color); margin-bottom: 1rem;"></div>
+                        
+                        <button type="submit" class="button-primary" style="width: 100%;">
+                            Login
                         </button>
-                    </div>
+                    </form>
                 </div>
             </div>
-
-            <!-- Data Export -->
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">📥 Data Export</h2>
+            
+            <!-- Users Section -->
+            <div id="users-section" class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1>👥 User Management</h1>
+                    <button id="create-user-btn" class="button-primary">+ Create User</button>
                 </div>
-                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                    Export all system data including users, conversations, and attachments metadata.
+                
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value" id="stat-total-users">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Onboarding Complete</div>
+                        <div class="stat-value" id="stat-onboarding">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Tasks</div>
+                        <div class="stat-value" id="stat-tasks">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Messages</div>
+                        <div class="stat-value" id="stat-messages">-</div>
+                    </div>
+                </div>
+                
+                <!-- Users Table -->
+                <div id="users-table-container"></div>
+            </div>
+            
+            <!-- Reports Section -->
+            <div id="reports-section" class="section">
+                <h1>📊 Reports</h1>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Generate AI-powered analysis reports for your organization
                 </p>
-                <button id="export-all-btn" class="btn btn-secondary">
-                    📥 Export All Data (JSON)
-                </button>
+                
+                <div id="reports-content">
+                    <!-- Report generation UI goes here -->
+                    <p>Report generation interface</p>
+                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- CREATE USER MODAL -->
-    <div id="create-user-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Create New User</h2>
             
-            <form id="create-user-form">
-                <div class="form-group">
-                    <label for="new-user-email">Email</label>
-                    <input type="email" id="new-user-email" required>
-                </div>
+            <!-- ⭐ NEW: Tools & Platforms Section -->
+            <div id="tools-section" class="section">
+                <h1>🔧 Tools & Platforms</h1>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    View and analyze software, tools, and platforms used across your organization
+                </p>
                 
-                <div class="form-group">
-                    <label for="new-user-name">Full Name</label>
-                    <input type="text" id="new-user-name" required>
-                </div>
+                <!-- Tools content will be dynamically loaded here -->
+                <div id="tools-container"></div>
+            </div>
+            
+            <!-- Export Section -->
+            <div id="export-section" class="section">
+                <h1>💾 Data Export</h1>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Export all conversation data and user information
+                </p>
                 
-                <div class="form-group">
-                    <label for="new-user-role">Role/Position</label>
-                    <input type="text" id="new-user-role" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="new-user-password">Temporary Password</label>
-                    <input type="text" id="new-user-password" required>
-                    <small>User will be prompted to change on first login</small>
-                </div>
-                
-                <div id="create-user-error" class="error-message hidden"></div>
-                
-                <div class="modal-actions">
-                    <button type="button" id="cancel-create-user-btn" class="btn btn-secondary">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Create User
+                <div id="export-content">
+                    <button id="export-all-btn" class="button-primary">
+                        Download All Data (JSON)
                     </button>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- RESET PASSWORD MODAL -->
-    <div id="reset-password-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Reset Password</h2>
-            <p id="reset-user-name" style="margin-bottom: 1.5rem; font-weight: 500;"></p>
-            
-            <form id="reset-password-form">
-                <div class="form-group">
-                    <label for="reset-new-password">New Temporary Password</label>
-                    <input type="text" id="reset-new-password" required>
-                    <small>User will be prompted to change on next login</small>
-                </div>
-                
-                <div id="reset-password-error" class="error-message hidden"></div>
-                
-                <div class="modal-actions">
-                    <button type="button" id="cancel-reset-password-btn" class="btn btn-secondary">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Reset Password
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- DELETE USER MODAL -->
-    <div id="delete-user-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Delete User</h2>
-            <p>Are you sure you want to delete <strong id="delete-user-name"></strong>?</p>
-            <p style="color: var(--danger-color);">
-                This will permanently delete all user data and conversations. This cannot be undone.
-            </p>
-            
-            <div class="modal-actions">
-                <button id="cancel-delete-user-btn" class="btn btn-secondary">
-                    Cancel
-                </button>
-                <button id="confirm-delete-user-btn" class="btn btn-danger">
-                    Delete User
-                </button>
             </div>
         </div>
     </div>
-
-    <!-- VIEW CONVERSATIONS MODAL -->
-    <div id="view-conversations-modal" class="modal hidden">
-        <div class="modal-content modal-large-content">
-            <div class="modal-header">
-                <h2>Conversations - <span id="conversations-user-name"></span></h2>
-                <button id="close-conversations-btn" class="btn btn-icon">×</button>
-            </div>
-            
-            <div id="conversations-list"></div>
-        </div>
-    </div>
-
-    <!-- REPORT PREVIEW MODAL -->
-    <div id="report-preview-modal" class="modal hidden">
-        <div class="modal-content modal-large-content">
-            <div class="modal-header">
-                <h2 id="report-preview-title">Report Preview</h2>
-                <button id="close-report-btn" class="btn btn-icon">×</button>
-            </div>
-            
-            <div id="report-preview-content" class="report-preview"></div>
-            
-            <div class="modal-actions">
-                <button id="download-report-btn" class="btn btn-primary">
-                    📥 Download Report
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- USER CREDENTIALS MODAL -->
-    <div id="user-credentials-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>✅ User Created Successfully</h2>
-            <p style="margin-bottom: 1.5rem;">Share these credentials with the new user:</p>
-            
-            <div class="form-group">
-                <label>Website</label>
-                <input type="text" id="cred-website" readonly>
-            </div>
-            
-            <div class="form-group">
-                <label>Email</label>
-                <input type="text" id="cred-email" readonly>
-            </div>
-            
-            <div class="form-group">
-                <label>Temporary Password</label>
-                <input type="text" id="cred-password" readonly>
-            </div>
-            
-            <p style="color: var(--text-secondary); font-size: 0.875rem;">
-                The user will be prompted to create a new password on first login.
-            </p>
-            
-            <div class="modal-actions">
-                <button id="copy-credentials-btn" class="btn btn-secondary">
-                    Copy to Clipboard
-                </button>
-                <button id="close-credentials-btn" class="btn btn-primary">
-                    Done
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- VOICE MANAGEMENT MODALS -->
-    <!-- Voice Management Modal -->
-    <div id="voice-modal" class="modal hidden">
-        <div class="modal-content voice-modal-content">
-            <div class="voice-modal-header">
-                <h2 class="voice-modal-title">🎤 Voice Configuration</h2>
-                <button id="close-voice-modal-btn" class="btn btn-icon" aria-label="Close">×</button>
-            </div>
-            
-            <div id="voice-status-message" class="status-message hidden"></div>
-            
-            <div class="voice-controls">
-                <div class="voice-controls-row">
-                    <div class="form-group-voice">
-                        <label for="default-voice-select">Default Voice</label>
-                        <select id="default-voice-select">
-                            <option value="">Select default voice...</option>
-                        </select>
-                    </div>
-                    <div class="voice-action-buttons">
-                        <button id="add-voice-btn" class="btn btn-primary">
-                            ➕ Add Voice
-                        </button>
-                        <button id="browse-api-voices-btn" class="btn btn-secondary">
-                            🔍 Browse Eleven Labs
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="voices-list" class="voices-list"></div>
-            
-            <div class="modal-actions">
-                <button id="save-voice-config-btn" class="btn btn-primary">
-                    💾 Save Configuration
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Voice Form Modal -->
-    <div id="voice-form-modal" class="modal hidden">
-        <div class="modal-content voice-form-modal">
-            <h2 id="voice-form-title">Add New Voice</h2>
-            
-            <form id="voice-form">
-                <div class="voice-form-group">
-                    <label for="voice-id-input">
-                        Voice ID <span style="color: var(--danger-color);">*</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        id="voice-id-input" 
-                        required
-                        placeholder="e.g., 21m00Tcm4TlvDq8ikWAM"
-                    >
-                    <small>The Eleven Labs voice ID</small>
-                </div>
-                
-                <div class="voice-form-group">
-                    <label for="voice-name-input">
-                        Voice Name <span style="color: var(--danger-color);">*</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        id="voice-name-input" 
-                        required
-                        placeholder="e.g., Professional Male"
-                    >
-                    <small>A friendly name users will see</small>
-                </div>
-                
-                <div class="voice-form-group">
-                    <label for="voice-desc-input">Description</label>
-                    <textarea 
-                        id="voice-desc-input"
-                        placeholder="e.g., Clear, authoritative voice"
-                    ></textarea>
-                    <small>Help users understand when to use this voice</small>
-                </div>
-                
-                <div class="modal-actions">
-                    <button type="button" id="cancel-voice-form-btn" class="btn btn-secondary">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Save Voice
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- API Voices Browser Modal -->
-    <div id="api-voices-modal" class="modal hidden api-voices-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Browse Eleven Labs Voices</h2>
-                <button id="close-api-voices-btn" class="btn btn-icon" aria-label="Close">×</button>
-            </div>
-            
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                Select a voice from your Eleven Labs library to add to TIIS.
-            </p>
-            
-            <div id="api-voices-list" class="api-voices-list"></div>
-        </div>
-    </div>
-
-    <script src="admin-voice-manager.js"></script>
-    <script src="admin-dashboard.js"></script>
+    
+    <!-- Load Scripts -->
+    <script src="/admin-dashboard.js"></script>
+    <script src="/admin-tools-manager.js"></script> <!-- ⭐ NEW: Tools manager UI -->
 </body>
 </html>

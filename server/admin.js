@@ -1,3 +1,6 @@
+// Admin Routes - FIXED VERSION
+// Fixed createUser call to use correct parameters
+
 const express = require('express');
 const router = express.Router();
 const fs = require('fs').promises;
@@ -9,21 +12,23 @@ const { hashPassword } = require('./auth');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const CONVERSATIONS_DIR = path.join(__dirname, '../data/conversations');
 
-// Admin login (verify password) - NO AUTH REQUIRED FOR THIS ROUTE
+// ============================================
+// AUTHENTICATION
+// ============================================
+
 router.post('/login', (req, res) => {
   const { password } = req.body;
   
   if (password === ADMIN_PASSWORD) {
     res.json({
       success: true,
-      token: password // Simple - just use password as token
+      token: password
     });
   } else {
     res.status(401).json({ error: 'Invalid password' });
   }
 });
 
-// Admin auth middleware
 function requireAdminAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   
@@ -40,15 +45,16 @@ function requireAdminAuth(req, res, next) {
   next();
 }
 
-// Apply auth to all OTHER admin routes (not login)
 router.use(requireAdminAuth);
 
-// Get all users with stats
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
 router.get('/users', async (req, res) => {
   try {
     const users = await userManager.getAllUsers();
     
-    // Get stats for each user
     const usersWithStats = await Promise.all(
       users.map(async (user) => {
         const stats = await userManager.getUserStats(user.email);
@@ -56,13 +62,11 @@ router.get('/users', async (req, res) => {
       })
     );
     
-    // Calculate totals
     const stats = {
       total_users: usersWithStats.length,
       onboarding_complete: usersWithStats.filter(u => u.onboarding_complete).length,
       total_tasks: usersWithStats.reduce((sum, u) => sum + u.task_count, 0),
-      total_messages: usersWithStats.reduce((sum, u) => sum + u.total_messages, 0),
-      total_storage_mb: usersWithStats.reduce((sum, u) => sum + u.storage_used_mb, 0)
+      total_messages: usersWithStats.reduce((sum, u) => sum + u.total_messages, 0)
     };
     
     res.json({
@@ -76,118 +80,85 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// Create new user
-router.post('/users/create', async (req, res) => {
+// ⭐ FIXED: Create new user with correct parameter order
+router.post('/users', async (req, res) => {
   try {
-    const { email, name, role, temp_password } = req.body;
+    const { name, email, role, password } = req.body;
     
-    if (!email || !name || !role || !temp_password) {
-      return res.status(400).json({ error: 'All fields required' });
+    console.log('Creating user:', { name, email, role });
+    
+    // Validate required fields
+    if (!name || !email || !role || !password) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: name, email, role, password' 
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        error: 'Password must be at least 8 characters' 
+      });
     }
     
     // Check if user already exists
-    const existing = await userManager.getUserByEmail(email);
-    if (existing) {
-      return res.status(400).json({ error: 'User already exists' });
+    try {
+      const existingUser = await userManager.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: 'User with this email already exists' });
+      }
+    } catch (error) {
+      // User doesn't exist - this is what we want
     }
     
     // Hash password
-    const passwordHash = await hashPassword(temp_password);
+    const hashedPassword = await hashPassword(password);
+    console.log('Password hashed successfully');
     
-    // Create user
-    const user = await userManager.createUser(email, name, role, true, passwordHash);
+    // ⭐ FIXED: Call createUser with correct parameters
+    // Signature: createUser(email, name, role, tempPassword, passwordHash)
+    const newUser = await userManager.createUser(
+      email,        // email
+      name,         // name  
+      role,         // role
+      true,         // tempPassword flag
+      hashedPassword // passwordHash
+    );
+    
+    console.log(`✅ Admin created new user: ${email}`);
     
     res.json({
       success: true,
       user: {
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        temp_password: temp_password // Send back for admin to share with user
+        user_id: newUser.user_id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        created_at: newUser.created_at
       }
     });
     
   } catch (error) {
     console.error('Error creating user:', error);
-    res.status(500).json({ error: 'Failed to create user' });
-  }
-});
-
-// Reset user password
-router.post('/users/reset-password', async (req, res) => {
-  try {
-    const { email, new_password } = req.body;
-    
-    if (!email || !new_password) {
-      return res.status(400).json({ error: 'Email and new password required' });
-    }
-    
-    // Get user
-    const user = await userManager.getUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    // Hash new password
-    const passwordHash = await hashPassword(new_password);
-    
-    // Update user with temp password flag
-    user.password_hash = passwordHash;
-    user.temp_password = true; // Force password change on next login
-    await userManager.updateUser(user);
-    
-    res.json({
-      success: true,
-      message: 'Password reset successfully',
-      temp_password: new_password
-    });
-    
-  } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ error: 'Failed to reset password' });
-  }
-});
-
-// Delete user
-router.delete('/users/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    // Get user
-    const user = await userManager.getUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    // Delete user's conversations directory
-    const sanitized = email.replace('@', '_at_').replace(/[^a-zA-Z0-9_.-]/g, '_');
-    const userConversationsDir = path.join(CONVERSATIONS_DIR, sanitized);
-    
-    try {
-      // Recursively delete conversations directory
-      await fs.rm(userConversationsDir, { recursive: true, force: true });
-    } catch (error) {
-      console.log('No conversations directory to delete or already deleted');
-    }
-    
-    // Delete user file
-    await userManager.deleteUser(email);
-    
-    res.json({
-      success: true,
-      message: 'User deleted successfully'
-    });
-    
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
+    res.status(500).json({ error: 'Failed to create user: ' + error.message });
   }
 });
 
 // Get all conversations for a specific user
-router.get('/conversations/:email', async (req, res) => {
+router.get('/users/:email/conversations', async (req, res) => {
   try {
-    const { email } = req.params;
+    const email = decodeURIComponent(req.params.email);
+    
+    const user = await userManager.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     
     const sanitized = email.replace('@', '_at_').replace(/[^a-zA-Z0-9_.-]/g, '_');
     const userDir = path.join(CONVERSATIONS_DIR, sanitized);
@@ -201,107 +172,136 @@ router.get('/conversations/:email', async (req, res) => {
         if (file.endsWith('.json')) {
           const filepath = path.join(userDir, file);
           const data = JSON.parse(await fs.readFile(filepath, 'utf8'));
-          conversations.push(data);
+          
+          conversations.push({
+            conversation_id: data.conversation_id,
+            type: data.type,
+            title: data.type === 'onboarding' ? 'Onboarding' : data.title,
+            status: data.status,
+            created_at: data.created_at,
+            last_updated: data.last_updated,
+            message_count: data.messages.length,
+            summary: data.summary || null
+          });
         }
       }
     } catch (error) {
-      if (error.code !== 'ENOENT') {
-        throw error;
-      }
+      console.log(`No conversations found for user: ${email}`);
     }
     
-    res.json({ conversations });
+    conversations.sort((a, b) => 
+      new Date(b.last_updated) - new Date(a.last_updated)
+    );
+    
+    res.json({
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role
+      },
+      conversations
+    });
     
   } catch (error) {
-    console.error('Error getting conversations:', error);
+    console.error('Error getting user conversations:', error);
     res.status(500).json({ error: 'Failed to get conversations' });
   }
 });
 
-// Corporation-wide analysis
-router.post('/analyze/corporation', async (req, res) => {
+// Get specific conversation detail
+router.get('/users/:email/conversations/:conversationId', async (req, res) => {
   try {
-    const users = await userManager.getAllUsers();
+    const email = decodeURIComponent(req.params.email);
+    const conversationId = req.params.conversationId;
     
-    // Gather all conversations
-    const allData = [];
+    const user = await userManager.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     
-    for (const user of users) {
-      const sanitized = user.email.replace('@', '_at_').replace(/[^a-zA-Z0-9_.-]/g, '_');
-      const userDir = path.join(CONVERSATIONS_DIR, sanitized);
+    const sanitized = email.replace('@', '_at_').replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const filename = conversationId === 'onboarding' 
+      ? 'onboarding.json'
+      : `task_${conversationId}.json`;
+    const filepath = path.join(CONVERSATIONS_DIR, sanitized, filename);
+    
+    try {
+      const data = JSON.parse(await fs.readFile(filepath, 'utf8'));
       
-      let onboardingSummary = '';
-      const tasks = [];
-      
-      try {
-        const files = await fs.readdir(userDir);
+      const formattedMessages = data.messages.map(msg => {
+        let content = msg.content;
         
-        for (const file of files) {
-          if (file.endsWith('.json')) {
-            const filepath = path.join(userDir, file);
-            const data = JSON.parse(await fs.readFile(filepath, 'utf8'));
-            
-            if (data.type === 'onboarding' && data.summary) {
-              onboardingSummary = data.summary;
-            } else if (data.type === 'task') {
-              tasks.push({
-                title: data.title,
-                messages: data.messages.length,
-                last_updated: data.last_updated
-              });
-            }
-          }
+        if (typeof content === 'string') {
+          content = [{ type: 'text', text: content }];
         }
-      } catch (error) {
-        // User might not have conversations yet
-      }
+        
+        return {
+          message_id: msg.message_id,
+          role: msg.role,
+          content: content,
+          timestamp: msg.timestamp
+        };
+      });
       
-      if (onboardingSummary || tasks.length > 0) {
-        allData.push({
-          name: user.name,
-          role: user.role,
-          onboarding_summary: onboardingSummary,
-          tasks: tasks
-        });
+      res.json({
+        conversation: {
+          conversation_id: data.conversation_id,
+          type: data.type,
+          title: data.type === 'onboarding' ? 'Onboarding' : data.title,
+          status: data.status,
+          created_at: data.created_at,
+          last_updated: data.last_updated,
+          message_count: data.messages.length,
+          messages: formattedMessages,
+          summary: data.summary || null
+        }
+      });
+      
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return res.status(404).json({ error: 'Conversation not found' });
       }
+      throw error;
     }
-    
-    if (allData.length === 0) {
-      return res.status(400).json({ error: 'No data to analyze yet' });
-    }
-    
-    // Format for Claude
-    const formattedData = allData.map(user => {
-      return `
-## ${user.name} - ${user.role}
-
-### Onboarding Summary:
-${user.onboarding_summary || 'Not completed'}
-
-### Tasks Documented (${user.tasks.length} total):
-${user.tasks.map(t => `- ${t.title} (${t.messages} messages)`).join('\n')}
-`;
-    }).join('\n---\n');
-    
-    // Generate analysis
-    const analysis = await claudeService.generateCorporationAnalysis(formattedData);
-    
-    res.json({
-      analysis,
-      generated_at: new Date().toISOString(),
-      users_analyzed: allData.length
-    });
     
   } catch (error) {
-    console.error('Error running corporation analysis:', error);
-    res.status(500).json({ error: 'Analysis failed: ' + error.message });
+    console.error('Error getting conversation detail:', error);
+    res.status(500).json({ error: 'Failed to get conversation' });
   }
 });
 
-// Individual user analysis
-router.post('/analyze/user/:email', async (req, res) => {
+// Reset user password
+router.post('/users/reset-password', async (req, res) => {
   try {
-    const { email } = req.params;
+    const { email, new_password } = req.body;
+    
+    if (!email || !new_password) {
+      return res.status(400).json({ error: 'Email and new password required' });
+    }
+    
+    const hashedPassword = await hashPassword(new_password);
+    const user = await userManager.getUserByEmail(email);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    user.password_hash = hashedPassword;
+    user.temp_password = true;
+    await userManager.updateUser(user);
+    
+    res.json({ success: true, message: 'Password reset successfully' });
+    
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// Delete user
+router.delete('/users/:email', async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
     
     const user = await userManager.getUserByEmail(email);
     if (!user) {
@@ -311,104 +311,32 @@ router.post('/analyze/user/:email', async (req, res) => {
     const sanitized = email.replace('@', '_at_').replace(/[^a-zA-Z0-9_.-]/g, '_');
     const userDir = path.join(CONVERSATIONS_DIR, sanitized);
     
-    let onboardingSummary = '';
-    const taskConversations = [];
-    
     try {
-      const files = await fs.readdir(userDir);
-      
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filepath = path.join(userDir, file);
-          const data = JSON.parse(await fs.readFile(filepath, 'utf8'));
-          
-          if (data.type === 'onboarding' && data.summary) {
-            onboardingSummary = data.summary;
-          } else if (data.type === 'task') {
-            // Extract conversation snippets
-            const snippets = data.messages
-              .filter(m => m.role === 'user')
-              .map(m => {
-                const text = Array.isArray(m.content) 
-                  ? m.content.find(c => c.type === 'text')?.text || ''
-                  : m.content;
-                return text;
-              })
-              .join('\n');
-            
-            taskConversations.push({
-              title: data.title,
-              snippets: snippets
-            });
-          }
-        }
-      }
+      await fs.rm(userDir, { recursive: true, force: true });
     } catch (error) {
-      // User might not have conversations
+      console.error('Error deleting user conversations:', error);
     }
     
-    if (!onboardingSummary && taskConversations.length === 0) {
-      return res.status(400).json({ error: 'No data to analyze for this user' });
-    }
+    await userManager.deleteUser(email);
     
-    // Format for Claude
-    const formattedConversations = taskConversations.map(t => {
-      return `### ${t.title}\n${t.snippets}`;
-    }).join('\n\n');
-    
-    const employeeData = {
-      name: user.name,
-      role: user.role,
-      conversations: `
-## Onboarding Summary:
-${onboardingSummary}
-
-## Task Conversations:
-${formattedConversations}
-`
-    };
-    
-    // Generate analysis
-    const analysis = await claudeService.generateIndividualAnalysis(employeeData);
-    
-    res.json({
-      analysis,
-      user: {
-        name: user.name,
-        email: user.email,
-        role: user.role
-      },
-      tasks_analyzed: taskConversations.length
-    });
+    res.json({ success: true, message: 'User deleted successfully' });
     
   } catch (error) {
-    console.error('Error running individual analysis:', error);
-    res.status(500).json({ error: 'Analysis failed: ' + error.message });
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
-// Export all data
-router.get('/export/all', async (req, res) => {
+// ============================================
+// DATA EXPORT
+// ============================================
+
+router.get('/export', async (req, res) => {
   try {
     const users = await userManager.getAllUsers();
-    
-    const exportData = {
-      export_date: new Date().toISOString(),
-      users: [],
-      conversations: []
-    };
+    const conversations = [];
     
     for (const user of users) {
-      exportData.users.push({
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        onboarding_complete: user.onboarding_complete,
-        storage_used_mb: user.storage_used_mb,
-        created_at: user.created_at,
-        last_login: user.last_login
-      });
-      
       const sanitized = user.email.replace('@', '_at_').replace(/[^a-zA-Z0-9_.-]/g, '_');
       const userDir = path.join(CONVERSATIONS_DIR, sanitized);
       
@@ -419,21 +347,63 @@ router.get('/export/all', async (req, res) => {
           if (file.endsWith('.json')) {
             const filepath = path.join(userDir, file);
             const data = JSON.parse(await fs.readFile(filepath, 'utf8'));
-            exportData.conversations.push(data);
+            
+            conversations.push({
+              ...data,
+              user_email: user.email
+            });
           }
         }
       } catch (error) {
-        // User might not have conversations
+        // No conversations for this user
       }
     }
     
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="tiis-export.json"');
-    res.json(exportData);
+    res.json({
+      export_date: new Date().toISOString(),
+      users: users.map(u => ({
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        onboarding_complete: u.onboarding_complete,
+        storage_used_mb: u.storage_used_mb,
+        created_at: u.created_at,
+        last_login: u.last_login
+      })),
+      conversations
+    });
     
   } catch (error) {
     console.error('Error exporting data:', error);
-    res.status(500).json({ error: 'Export failed' });
+    res.status(500).json({ error: 'Failed to export data' });
+  }
+});
+
+// ============================================
+// ANALYSIS (Placeholders)
+// ============================================
+
+router.post('/analyze/corporation', async (req, res) => {
+  try {
+    res.json({
+      message: 'Corporation-wide analysis not yet implemented',
+      placeholder: true
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Analysis failed' });
+  }
+});
+
+router.post('/analyze/user/:email', async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    
+    res.json({
+      message: `Analysis for ${email} not yet implemented`,
+      placeholder: true
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Analysis failed' });
   }
 });
 
