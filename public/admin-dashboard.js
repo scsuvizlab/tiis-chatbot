@@ -172,10 +172,10 @@ function createModals() {
                 <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">User Actions</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <button id="reset-password-btn" class="btn btn-secondary" style="width: 100%;">
-                        ðŸ”‘ Reset Password
+                        🔒 Reset Password
                     </button>
                     <button id="delete-user-btn" class="btn btn-danger" style="width: 100%;">
-                        ðŸ—‘ï¸ Delete User
+                        🗑️ Delete User
                     </button>
                 </div>
             </div>
@@ -332,7 +332,7 @@ async function manageUser(email) {
         if (conversations.length === 0) {
             content.innerHTML = `
                 <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-                    <div style="font-size: 2rem; margin-bottom: 1rem;">ðŸ”­</div>
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🔭</div>
                     <div>No conversations yet</div>
                     <div style="font-size: 0.875rem; margin-top: 0.5rem;">User hasn't started any conversations</div>
                 </div>
@@ -345,7 +345,7 @@ async function manageUser(email) {
         `;
         
         conversations.forEach(conv => {
-            const icon = conv.type === 'onboarding' ? 'ðŸŽ¯' : 'ðŸ“‹';
+            const icon = conv.type === 'onboarding' ? '🎯' : '📋';
             const lastUpdated = formatDate(conv.last_updated);
             
             html += `
@@ -561,7 +561,7 @@ async function handleDeleteUser() {
     
     const confirmText = `DELETE ${user.name.toUpperCase()}`;
     const userInput = prompt(
-        `âš ï¸ WARNING: This will permanently delete ${user.name} and ALL their conversations.\n\n` +
+        `⚠️ WARNING: This will permanently delete ${user.name} and ALL their conversations.\n\n` +
         `This action CANNOT be undone.\n\n` +
         `Type "${confirmText}" to confirm deletion:`
     );
@@ -785,7 +785,7 @@ function renderUsersTable() {
                 <td style="padding: 1rem; text-align: center;">${lastActive}</td>
                 <td style="padding: 1rem; text-align: center;">
                     <button class="button-primary" onclick="manageUser('${user.email}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                        âš™ï¸ Manage
+                        ⚙️ Manage
                     </button>
                 </td>
             </tr>
@@ -811,7 +811,7 @@ async function loadToolsSection() {
         try {
             elements.toolsContainer.innerHTML = `
                 <div style="text-align: center; padding: 3rem;">
-                    <div style="font-size: 2rem; margin-bottom: 1rem;">ðŸ”§</div>
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🔧</div>
                     <div>Loading tools data...</div>
                 </div>
             `;
@@ -849,7 +849,7 @@ async function loadKnowledgeSection() {
         try {
             container.innerHTML = `
                 <div style="text-align: center; padding: 3rem;">
-                    <div style="font-size: 2rem; margin-bottom: 1rem;">ðŸ“š</div>
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">📚</div>
                     <div>Loading knowledge modules...</div>
                 </div>
             `;
