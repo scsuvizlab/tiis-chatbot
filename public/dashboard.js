@@ -44,7 +44,7 @@ async function init() {
         }
         
         currentUser = data.user;
-        console.log('✅ User authenticated:', currentUser.email);
+        console.log('✓ User authenticated:', currentUser.email);
         
         // Cache DOM elements
         cacheElements();
@@ -62,9 +62,14 @@ async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('start_onboarding') === 'true') {
             await startOnboarding();
+            
+            // Clear the query parameter from URL to prevent re-triggering on refresh
+            const url = new URL(window.location);
+            url.searchParams.delete('start_onboarding');
+            window.history.replaceState({}, '', url);
         }
         
-        console.log('✅ Dashboard loaded successfully!');
+        console.log('✓ Dashboard loaded successfully!');
         
     } catch (error) {
         console.error('❌ Dashboard init error:', error);
@@ -260,7 +265,7 @@ async function loadConversations() {
 // Render conversation list in sidebar
 function renderConversationList() {
     if (conversations.length === 0) {
-        elements.conversationList.innerHTML = '<div class="empty-state">No conversations yet. Complete onboarding to get started!</div>';
+        elements.conversationList.innerHTML = '<div class="empty-state">No conversations yet. ✓ Complete onboarding to get started!</div>';
         return;
     }
     
@@ -654,8 +659,22 @@ function handleFileDrop(files) {
 
 function addAttachments(files) {
     files.forEach(file => {
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+        // Validate file type - now supports images, PDFs, Word, Excel, and text files
+        const validTypes = [
+            // Images
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            // PDFs
+            'application/pdf',
+            // Word documents
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+            'application/msword', // .doc
+            // Excel spreadsheets
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.ms-excel', // .xls
+            // Text files
+            'text/plain', // .txt
+            'text/markdown' // .md
+        ];
         if (!validTypes.includes(file.type)) {
             alert(`File type not supported: ${file.name}`);
             return;
@@ -735,7 +754,7 @@ async function handleNewTask() {
         
         if (!response.ok) {
             const data = await response.json();
-            if (data.error === 'Complete onboarding first') {
+            if (data.error === '✓ Complete onboarding first') {
                 alert('Please complete your onboarding conversation before creating tasks.');
                 return;
             }
@@ -766,7 +785,24 @@ async function startOnboarding() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to start onboarding');
+            const errorData = await response.json().catch(() => ({}));
+            
+            // If onboarding already exists, just load it instead of erroring
+            if (response.status === 400 && errorData.error === 'Onboarding already in progress') {
+                console.log('Onboarding already exists, loading existing conversation');
+                await loadConversations();
+                
+                // Find and load the onboarding conversation
+                const onboardingConv = conversations.find(c => c.type === 'onboarding');
+                if (onboardingConv) {
+                    await loadConversation(onboardingConv.conversation_id);
+                } else {
+                    console.warn('Onboarding conversation not found in list');
+                }
+                return;
+            }
+            
+            throw new Error(errorData.error || 'Failed to start onboarding');
         }
         
         const data = await response.json();
@@ -779,7 +815,7 @@ async function startOnboarding() {
         
     } catch (error) {
         console.error('Error starting onboarding:', error);
-        alert('Failed to start onboarding');
+        alert('Failed to start onboarding: ' + error.message);
     }
 }
 

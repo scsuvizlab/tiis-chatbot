@@ -34,7 +34,8 @@ async function createUser(email, name, role, tempPassword, passwordHash) {
     created_at: new Date().toISOString(),
     onboarding_complete: false,
     storage_used_mb: 0,
-    last_login: null
+    last_login: null,
+    knowledge_module_id: null // NEW: Custom interview module assignment
   };
   
   const filepath = getUserFilePath(email);
@@ -173,7 +174,7 @@ async function deleteUser(email) {
   }
 }
 
-// Get user statistics
+// Get user statistics - FIXED to include knowledge_module_id
 async function getUserStats(email) {
   const user = await getUserByEmail(email);
   
@@ -213,8 +214,27 @@ async function getUserStats(email) {
     task_count: taskCount,
     total_messages: totalMessages,
     storage_used_mb: user.storage_used_mb,
-    last_active: user.last_login
+    last_active: user.last_login,
+    knowledge_module_id: user.knowledge_module_id // ADDED: Include knowledge module assignment
   };
+}
+
+// Assign knowledge module to user
+async function assignKnowledgeModule(email, moduleId) {
+  const user = await getUserByEmail(email);
+  
+  if (!user) {
+    throw new Error('User not found');
+  }
+  
+  user.knowledge_module_id = moduleId;
+  
+  const filepath = getUserFilePath(email);
+  await fs.writeFile(filepath, JSON.stringify(user, null, 2), 'utf8');
+  
+  console.log(`📚 Assigned knowledge module '${moduleId}' to ${email}`);
+  
+  return user;
 }
 
 module.exports = {
@@ -229,5 +249,6 @@ module.exports = {
   hasStorageQuota,
   deleteUser,
   getUserStats,
+  assignKnowledgeModule, // NEW
   STORAGE_QUOTA_MB
 };

@@ -4,7 +4,28 @@ const router = express.Router();
 const multer = require('multer');
 const voiceService = require('./voice-service');
 const userManager = require('./user-manager');
-const { requireAuth } = require('./auth');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// ============================================
+// AUTHENTICATION MIDDLEWARE (Inline copy to avoid import issues)
+// ============================================
+function requireAuth(req, res, next) {
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
 
 // Configure multer for audio file uploads (in-memory storage)
 const upload = multer({
@@ -37,7 +58,7 @@ router.post('/transcribe', requireAuth, upload.single('audio'), async (req, res)
       return res.status(400).json({ error: 'No audio file provided' });
     }
 
-    console.log('📝 Transcription request from:', req.user.email);
+    console.log('ðŸ“ Transcription request from:', req.user.email);
     console.log('   File size:', req.file.size, 'bytes');
     console.log('   MIME type:', req.file.mimetype);
 
@@ -76,7 +97,7 @@ router.post('/synthesize', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'No text provided' });
     }
 
-    console.log('🔊 TTS request from:', req.user.email);
+    console.log('ðŸ”Š TTS request from:', req.user.email);
     console.log('   Text length:', text.length, 'characters');
 
     // Get user's preferred voice or use provided voice_id or default
@@ -150,10 +171,10 @@ router.put('/preference', requireAuth, async (req, res) => {
   try {
     const { voice_id } = req.body;
     
-    console.log(`🎤 Voice preference save request from ${req.user.email}:`, voice_id);
+    console.log(`ðŸŽ¤ Voice preference save request from ${req.user.email}:`, voice_id);
 
     if (!voice_id) {
-      console.log('❌ No voice_id provided');
+      console.log('âŒ No voice_id provided');
       return res.status(400).json({ error: 'No voice_id provided' });
     }
 
@@ -162,7 +183,7 @@ router.put('/preference', requireAuth, async (req, res) => {
     if (!isValid) {
       const config = await voiceService.getVoiceConfig();
       const availableIds = config.voices.map(v => v.id).join(', ');
-      console.log(`❌ Invalid voice ID: ${voice_id}. Available: ${availableIds}`);
+      console.log(`âŒ Invalid voice ID: ${voice_id}. Available: ${availableIds}`);
       return res.status(400).json({ 
         error: `Invalid voice ID: "${voice_id}". Available voices: ${availableIds}` 
       });
@@ -173,7 +194,7 @@ router.put('/preference', requireAuth, async (req, res) => {
     user.preferred_voice_id = voice_id;
     await userManager.updateUser(user);
 
-    console.log(`✅ Updated voice preference for ${req.user.email} to ${voice_id}`);
+    console.log(`âœ… Updated voice preference for ${req.user.email} to ${voice_id}`);
 
     res.json({
       success: true,
@@ -181,7 +202,7 @@ router.put('/preference', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error updating voice preference:', error);
+    console.error('âŒ Error updating voice preference:', error);
     res.status(500).json({
       error: 'Failed to update preference',
       message: error.message
@@ -260,7 +281,7 @@ router.put('/admin/config', requireAdminAuth, async (req, res) => {
 
     const updated = await voiceService.updateVoiceConfig(config);
 
-    console.log('✅ Voice configuration updated by admin');
+    console.log('âœ… Voice configuration updated by admin');
 
     res.json({
       success: true,
@@ -289,7 +310,7 @@ router.post('/admin/test', requireAdminAuth, async (req, res) => {
       return res.status(400).json({ error: 'No voice_id provided' });
     }
 
-    console.log('🎵 Testing voice:', voice_id);
+    console.log('ðŸŽµ Testing voice:', voice_id);
 
     const audioBuffer = await voiceService.testVoice(voice_id, text);
 

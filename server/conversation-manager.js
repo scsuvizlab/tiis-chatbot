@@ -1,4 +1,4 @@
-// Conversation Manager - Complete with all endpoints
+// Conversation Manager - FIXED with attachment processing
 const express = require('express');
 const router = express.Router();
 const fs = require('fs').promises;
@@ -6,9 +6,31 @@ const path = require('path');
 const crypto = require('crypto');
 const claudeService = require('./claude-service');
 const userManager = require('./user-manager');
-const { requireAuth } = require('./auth');
+const documentParser = require('./document-parser');
+const jwt = require('jsonwebtoken');
+const os = require('os');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const CONVERSATIONS_DIR = path.join(__dirname, '../data/conversations');
+
+// ============================================
+// AUTHENTICATION MIDDLEWARE (Inline copy to avoid import issues)
+// ============================================
+function requireAuth(req, res, next) {
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
 
 // Ensure conversations directory exists
 async function ensureConversationsDir(email) {
@@ -29,6 +51,117 @@ function getConversationPath(email, conversationId) {
     ? 'onboarding.json' 
     : `task_${conversationId}.json`;
   return path.join(CONVERSATIONS_DIR, sanitized, filename);
+}
+
+// ============================================
+// ATTACHMENT PROCESSING
+// ============================================
+
+/**
+ * Convert frontend attachment format to Claude API format
+ * Frontend sends: {name, type, size, data}
+ * 
+ * Strategy:
+ * - Images & PDFs: Send directly to Claude as base64
+ * - Word/Excel/Text: Parse to text, send as text content
+ */
+async function processAttachments(attachments) {
+  if (!attachments || !Array.isArray(attachments) || attachments.length === 0) {
+    return [];
+  }
+  
+  const processed = [];
+  
+  for (const att of attachments) {
+    const mediaType = att.type || '';
+    const fileName = att.name || 'unknown';
+    
+    console.log(`📎 Processing attachment: ${fileName} (${mediaType})`);
+    
+    // IMAGES: Send directly to Claude
+    if (mediaType.startsWith('image/')) {
+      const supportedImages = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      
+      if (!supportedImages.includes(mediaType)) {
+        console.warn(`⚠️  Unsupported image type: ${mediaType}, skipping`);
+        continue;
+      }
+      
+      processed.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: mediaType,
+          data: att.data
+        }
+      });
+      
+      console.log(`✅ Added image: ${mediaType}`);
+    }
+    // PDF: Send directly to Claude
+    else if (mediaType === 'application/pdf') {
+      processed.push({
+        type: 'document',
+        source: {
+          type: 'base64',
+          media_type: 'application/pdf',
+          data: att.data
+        }
+      });
+      
+      console.log(`✅ Added PDF document`);
+    }
+    // PARSEABLE DOCUMENTS: Extract text and send as text
+    else if (documentParser.isParsableDocument(mediaType)) {
+      try {
+        // Save to temp file
+        const tempDir = os.tmpdir();
+        const tempFile = path.join(tempDir, `tiis_${crypto.randomUUID()}_${fileName}`);
+        
+        console.log(`💾 Saving temp file: ${tempFile}`);
+        await fs.writeFile(tempFile, Buffer.from(att.data, 'base64'));
+        
+        // Parse the document
+        console.log(`📖 Parsing ${fileName}...`);
+        const extractedText = await documentParser.parseDocument(tempFile, mediaType);
+        
+        // Clean up temp file
+        await fs.unlink(tempFile);
+        
+        // Add as text content with header
+        const capability = documentParser.getFileTypeCapabilities(mediaType);
+        const header = `--- Attached File: ${fileName} (${capability?.name || mediaType}) ---\n\n`;
+        
+        processed.push({
+          type: 'text',
+          text: header + extractedText
+        });
+        
+        console.log(`✅ Parsed document: ${fileName} (${extractedText.length} chars)`);
+        
+      } catch (error) {
+        console.error(`❌ Failed to parse ${fileName}:`, error);
+        
+        // Add error message as text so conversation doesn't fail
+        processed.push({
+          type: 'text',
+          text: `[Failed to parse attached file: ${fileName} - ${error.message}]`
+        });
+      }
+    }
+    // Unsupported file types
+    else {
+      console.warn(`⚠️  Unsupported file type: ${mediaType} (${fileName}), skipping`);
+      
+      // Add note about unsupported file
+      processed.push({
+        type: 'text',
+        text: `[Unsupported file type: ${fileName} (${mediaType})]`
+      });
+    }
+  }
+  
+  return processed;
 }
 
 // ============================================
@@ -54,6 +187,19 @@ router.post('/onboarding/start', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Onboarding already completed' });
     }
     
+    // ✅ CHECK: Does onboarding conversation already exist?
+    const filepath = getConversationPath(email, 'onboarding');
+    try {
+      await fs.access(filepath);
+      console.log(`⚠️  Onboarding conversation already exists for: ${email}`);
+      return res.status(400).json({ 
+        error: 'Onboarding already in progress',
+        conversation_id: 'onboarding'
+      });
+    } catch (err) {
+      // File doesn't exist, OK to create new conversation
+    }
+    
     // Create conversation directory
     await ensureConversationsDir(email);
     
@@ -71,7 +217,6 @@ router.post('/onboarding/start', requireAuth, async (req, res) => {
     };
     
     // Save conversation file
-    const filepath = getConversationPath(email, 'onboarding');
     await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
     
     // Generate greeting
@@ -104,12 +249,19 @@ router.post('/onboarding/start', requireAuth, async (req, res) => {
   }
 });
 
-// Send message in onboarding
+// Send message in onboarding - FIXED to handle attachments
 router.post('/onboarding/message', requireAuth, async (req, res) => {
   const email = req.user.email;
-  const { conversation_id, message } = req.body;
+  const { conversation_id, message, attachments } = req.body;  // ✅ EXTRACT attachments
   
-  console.log(`📝 [Onboarding Message] User: ${email}`);
+  console.log(`📝 [Onboarding Message] User: ${email}, Attachments: ${attachments?.length || 0}`);
+  
+  // Debug: Log attachment details
+  if (attachments && attachments.length > 0) {
+    attachments.forEach((att, i) => {
+      console.log(`  Attachment ${i}: ${att.name} (${att.type})`);
+    });
+  }
   
   try {
     if (conversation_id !== 'onboarding') {
@@ -122,11 +274,20 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
     
     // Load conversation
     const filepath = getConversationPath(email, 'onboarding');
+    console.log(`📂 Loading conversation from: ${filepath}`);
     const fileContent = await fs.readFile(filepath, 'utf8');
     const conversationData = JSON.parse(fileContent);
+    console.log(`📖 Loaded conversation with ${conversationData.messages.length} existing messages`);
     
-    // Save user message
+    // Build user content with text + attachments
     const userContent = [{ type: 'text', text: message }];
+    
+    // ✅ ADD attachments to content (now async)
+    if (attachments && attachments.length > 0) {
+      const processedAttachments = await processAttachments(attachments);
+      userContent.push(...processedAttachments);
+      console.log(`📎 Added ${processedAttachments.length} attachments to message`);
+    }
     
     conversationData.messages.push({
       message_id: crypto.randomUUID(),
@@ -134,6 +295,8 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
       content: userContent,
       timestamp: new Date().toISOString()
     });
+    
+    console.log(`💬 Added user message (${conversationData.messages.length} total messages)`);
     
     // Format messages for Claude API (only role and content)
     const history = conversationData.messages.map(msg => ({
@@ -147,6 +310,8 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
       email
     );
     
+    console.log(`🤖 Received bot response (${botResponse.length} chars)`);
+    
     // Save bot message
     conversationData.messages.push({
       message_id: crypto.randomUUID(),
@@ -156,7 +321,21 @@ router.post('/onboarding/message', requireAuth, async (req, res) => {
     });
     
     conversationData.last_updated = new Date().toISOString();
+    
+    console.log(`💾 Saving conversation with ${conversationData.messages.length} messages to: ${filepath}`);
     await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+    
+    // VERIFY: Read the file back to confirm it was written
+    const verifyContent = await fs.readFile(filepath, 'utf8');
+    const verifyData = JSON.parse(verifyContent);
+    console.log(`🔍 Verification: File now has ${verifyData.messages.length} messages (expected ${conversationData.messages.length})`);
+    
+    if (verifyData.messages.length !== conversationData.messages.length) {
+      console.error(`❌ WRITE FAILED! File has ${verifyData.messages.length} messages but should have ${conversationData.messages.length}`);
+      throw new Error('Message persistence failed - file write did not persist');
+    }
+    
+    console.log(`✅ Conversation saved successfully`);
     
     console.log(`✅ [Onboarding Message] Success`);
     
@@ -224,8 +403,8 @@ router.post('/task/new', requireAuth, async (req, res) => {
     const email = req.user.email;
     const user = await userManager.getUserByEmail(email);
     
-    if (!user || !user.onboarding_complete) {
-      return res.status(400).json({ error: 'Complete onboarding first' });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
     
     const conversationId = crypto.randomUUID();
@@ -275,12 +454,19 @@ router.post('/task/new', requireAuth, async (req, res) => {
   }
 });
 
-// Send message in task conversation
+// Send message in task conversation - FIXED to handle attachments
 router.post('/task/message', requireAuth, async (req, res) => {
   const email = req.user.email;
-  const { conversation_id, message } = req.body;
+  const { conversation_id, message, attachments } = req.body;  // ✅ EXTRACT attachments
   
-  console.log(`📝 [Task Message] User: ${email}, Conv: ${conversation_id}`);
+  console.log(`📝 [Task Message] User: ${email}, Conv: ${conversation_id}, Attachments: ${attachments?.length || 0}`);
+  
+  // Debug: Log attachment details
+  if (attachments && attachments.length > 0) {
+    attachments.forEach((att, i) => {
+      console.log(`  Attachment ${i}: ${att.name} (${att.type})`);
+    });
+  }
   
   try {
     if (!message || !message.trim()) {
@@ -288,16 +474,29 @@ router.post('/task/message', requireAuth, async (req, res) => {
     }
     
     const filepath = getConversationPath(email, conversation_id);
+    console.log(`📂 Loading task conversation from: ${filepath}`);
     const fileContent = await fs.readFile(filepath, 'utf8');
     const conversationData = JSON.parse(fileContent);
+    console.log(`📖 Loaded conversation with ${conversationData.messages.length} existing messages`);
     
-    // Save user message
+    // Build user content with text + attachments
+    const userContent = [{ type: 'text', text: message }];
+    
+    // ✅ ADD attachments to content (now async)
+    if (attachments && attachments.length > 0) {
+      const processedAttachments = await processAttachments(attachments);
+      userContent.push(...processedAttachments);
+      console.log(`📎 Added ${processedAttachments.length} attachments to message`);
+    }
+    
     conversationData.messages.push({
       message_id: crypto.randomUUID(),
       role: 'user',
-      content: [{ type: 'text', text: message }],
+      content: userContent,
       timestamp: new Date().toISOString()
     });
+    
+    console.log(`💬 Added user message (${conversationData.messages.length} total messages)`);
     
     // Generate title if first message
     let titleGenerated = null;
@@ -318,6 +517,8 @@ router.post('/task/message', requireAuth, async (req, res) => {
       email
     );
     
+    console.log(`🤖 Received bot response (${botResponse.length} chars)`);
+    
     // Save bot message
     conversationData.messages.push({
       message_id: crypto.randomUUID(),
@@ -327,7 +528,21 @@ router.post('/task/message', requireAuth, async (req, res) => {
     });
     
     conversationData.last_updated = new Date().toISOString();
+    
+    console.log(`💾 Saving conversation with ${conversationData.messages.length} messages to: ${filepath}`);
     await fs.writeFile(filepath, JSON.stringify(conversationData, null, 2), 'utf8');
+    
+    // VERIFY: Read the file back to confirm it was written
+    const verifyContent = await fs.readFile(filepath, 'utf8');
+    const verifyData = JSON.parse(verifyContent);
+    console.log(`🔍 Verification: File now has ${verifyData.messages.length} messages (expected ${conversationData.messages.length})`);
+    
+    if (verifyData.messages.length !== conversationData.messages.length) {
+      console.error(`❌ WRITE FAILED! File has ${verifyData.messages.length} messages but should have ${conversationData.messages.length}`);
+      throw new Error('Message persistence failed - file write did not persist');
+    }
+    
+    console.log(`✅ Conversation saved successfully`);
     
     console.log(`✅ [Task Message] Success`);
     

@@ -5,9 +5,9 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
+const bcrypt = require('bcrypt');
 const userManager = require('./user-manager');
 const claudeService = require('./claude-service');
-const { hashPassword } = require('./auth');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const CONVERSATIONS_DIR = path.join(__dirname, '../data/conversations');
@@ -80,7 +80,7 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// ⭐ FIXED: Create new user with correct parameter order
+// Ã¢Â­Â FIXED: Create new user with correct parameter order
 router.post('/users', async (req, res) => {
   try {
     const { name, email, role, password } = req.body;
@@ -118,10 +118,10 @@ router.post('/users', async (req, res) => {
     }
     
     // Hash password
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = await bcrypt.hash(password, 10);
     console.log('Password hashed successfully');
     
-    // ⭐ FIXED: Call createUser with correct parameters
+    // Ã¢Â­Â FIXED: Call createUser with correct parameters
     // Signature: createUser(email, name, role, tempPassword, passwordHash)
     const newUser = await userManager.createUser(
       email,        // email
@@ -131,7 +131,7 @@ router.post('/users', async (req, res) => {
       hashedPassword // passwordHash
     );
     
-    console.log(`✅ Admin created new user: ${email}`);
+    console.log(`Ã¢Å“â€¦ Admin created new user: ${email}`);
     
     res.json({
       success: true,
@@ -279,7 +279,7 @@ router.post('/users/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Email and new password required' });
     }
     
-    const hashedPassword = await hashPassword(new_password);
+    const hashedPassword = await bcrypt.hash(new_password, 10);
     const user = await userManager.getUserByEmail(email);
     
     if (!user) {
@@ -379,6 +379,72 @@ router.get('/export', async (req, res) => {
   }
 });
 
+// Export data for a specific user
+router.get('/export/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    const user = await userManager.getUserByEmail(email);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const sanitized = email.replace('@', '_at_').replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const userDir = path.join(CONVERSATIONS_DIR, sanitized);
+    const conversations = [];
+    
+    try {
+      const files = await fs.readdir(userDir);
+      
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          const filepath = path.join(userDir, file);
+          const data = JSON.parse(await fs.readFile(filepath, 'utf8'));
+          conversations.push(data);
+        }
+      }
+    } catch (error) {
+      // No conversations for this user - that's ok
+    }
+    
+    // Include attachments metadata
+    const attachmentsDir = path.join(userDir, 'attachments');
+    let attachments = [];
+    try {
+      const attachmentFiles = await fs.readdir(attachmentsDir);
+      attachments = attachmentFiles.map(f => ({
+        filename: f,
+        path: `attachments/${f}`
+      }));
+    } catch (error) {
+      // No attachments - that's ok
+    }
+    
+    res.json({
+      export_date: new Date().toISOString(),
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        onboarding_complete: user.onboarding_complete,
+        storage_used_mb: user.storage_used_mb,
+        created_at: user.created_at,
+        last_login: user.last_login,
+        knowledge_module_id: user.knowledge_module_id
+      },
+      conversations,
+      attachments_info: {
+        count: attachments.length,
+        files: attachments
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error exporting user data:', error);
+    res.status(500).json({ error: 'Failed to export user data' });
+  }
+});
+
 // ============================================
 // ANALYSIS (Placeholders)
 // ============================================
@@ -404,6 +470,80 @@ router.post('/analyze/user/:email', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Analysis failed' });
+  }
+});
+
+// ============================================
+// KNOWLEDGE MODULES
+// ============================================
+
+const knowledgeManager = require('./knowledge-manager');
+
+// List all available knowledge modules
+router.get('/knowledge/modules', async (req, res) => {
+  try {
+    const modules = await knowledgeManager.listAvailableModules();
+    
+    res.json({
+      success: true,
+      count: modules.length,
+      modules: modules
+    });
+    
+  } catch (error) {
+    console.error('Error listing knowledge modules:', error);
+    res.status(500).json({ error: 'Failed to list modules' });
+  }
+});
+
+// Get module details
+router.get('/knowledge/modules/:moduleId', async (req, res) => {
+  try {
+    const moduleId = req.params.moduleId;
+    const metadata = await knowledgeManager.getModuleMetadata(moduleId);
+    
+    if (!metadata) {
+      return res.status(404).json({ error: 'Module not found' });
+    }
+    
+    res.json({
+      success: true,
+      module: metadata
+    });
+    
+  } catch (error) {
+    console.error('Error getting module metadata:', error);
+    res.status(500).json({ error: 'Failed to get module' });
+  }
+});
+
+// Assign knowledge module to user
+router.post('/knowledge/assign', async (req, res) => {
+  try {
+    const { email, module_id } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email required' });
+    }
+    
+    // module_id can be null to unassign
+    const updatedUser = await userManager.assignKnowledgeModule(email, module_id);
+    
+    res.json({
+      success: true,
+      user: {
+        email: updatedUser.email,
+        name: updatedUser.name,
+        knowledge_module_id: updatedUser.knowledge_module_id
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error assigning knowledge module:', error);
+    res.status(500).json({ 
+      error: 'Failed to assign module',
+      message: error.message 
+    });
   }
 });
 

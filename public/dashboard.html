@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TIIS Dashboard</title>
+    <title>NorthStar Dashboard</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="user-voice-styles.css">
 </head>
@@ -12,7 +12,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1 class="sidebar-title">TIIS</h1>
+                <h1 class="sidebar-title">NorthStar</h1>
                 <button id="mobile-menu-close" class="btn-icon mobile-only" title="Close menu">×</button>
             </div>
             
@@ -65,7 +65,7 @@
             <!-- Welcome Screen (shown when no conversation selected) -->
             <div id="welcome-screen" class="welcome-screen">
                 <div class="welcome-content">
-                    <h2>Welcome to TIIS</h2>
+                    <h2>Welcome to NorthStar</h2>
                     <p class="welcome-subtitle">TrueNorth Intelligent Intake System</p>
                     
                     <div class="welcome-section">
@@ -105,7 +105,7 @@
                     <input 
                         type="file" 
                         id="file-input" 
-                        accept="image/*,application/pdf" 
+                        accept="image/*,application/pdf,.docx,.doc,.xlsx,.xls,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/plain,text/markdown" 
                         multiple 
                         style="display: none;"
                     >
@@ -166,7 +166,6 @@
 
     <script src="theme-switcher.js"></script>
     <script src="user-voice-interface.js"></script>
-   
     <script src="dashboard.js"></script>
 </body>
 </html>

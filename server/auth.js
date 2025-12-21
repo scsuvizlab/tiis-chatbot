@@ -114,13 +114,15 @@ router.post('/login', async (req, res) => {
 router.post('/change-password', async (req, res) => {
   try {
     const { old_password, new_password } = req.body;
-    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    // Check Authorization header FIRST (for temp tokens), then cookies
+    const token = req.headers.authorization?.split(' ')[1] || req.cookies.token;
     
     console.log('Change password request:', {
       hasOldPassword: !!old_password,
       hasNewPassword: !!new_password,
       newPasswordLength: new_password?.length,
       hasToken: !!token,
+      tokenSource: req.headers.authorization ? 'Authorization header' : 'Cookie',
       body: req.body
     });
     

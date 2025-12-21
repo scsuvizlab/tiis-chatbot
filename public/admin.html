@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TIIS Admin Dashboard</title>
+    <title>NorthStar Admin Dashboard</title>
     <link rel="stylesheet" href="/styles.css">
     <style>
         /* Admin-specific styles */
@@ -94,7 +94,7 @@
     <div class="admin-container">
         <!-- Sidebar Navigation -->
         <div class="admin-sidebar">
-            <h2 style="margin-bottom: 2rem; color: var(--text-primary);">TIIS Admin</h2>
+            <h2 style="margin-bottom: 2rem; color: var(--text-primary);">NorthStar Admin</h2>
             
             <button id="users-tab" class="tab-button active" onclick="showSection('users')">
                 👥 User Management
@@ -104,9 +104,16 @@
                 📊 Reports
             </button>
             
-            <!-- ⭐ NEW: Tools & Platforms Tab -->
             <button id="tools-tab" class="tab-button" onclick="showSection('tools')">
-                🔧 Tools & Platforms
+                🛠️ Tools & Platforms
+            </button>
+            
+            <button id="knowledge-tab" class="tab-button" onclick="showSection('knowledge')">
+                📚 Knowledge Modules
+            </button>
+            
+            <button id="voice-management-btn" class="tab-button">
+                🎙️ Voice Management
             </button>
             
             <button id="export-tab" class="tab-button" onclick="showSection('export')">
@@ -182,40 +189,134 @@
                 </p>
                 
                 <div id="reports-content">
-                    <!-- Report generation UI goes here -->
                     <p>Report generation interface</p>
                 </div>
             </div>
             
-            <!-- ⭐ NEW: Tools & Platforms Section -->
+            <!-- Tools & Platforms Section -->
             <div id="tools-section" class="section">
-                <h1>🔧 Tools & Platforms</h1>
+                <h1>🛠️ Tools & Platforms</h1>
                 <p style="color: var(--text-secondary); margin-bottom: 2rem;">
                     View and analyze software, tools, and platforms used across your organization
                 </p>
                 
-                <!-- Tools content will be dynamically loaded here -->
                 <div id="tools-container"></div>
+            </div>
+            
+            <!-- Knowledge Modules Section -->
+            <div id="knowledge-section" class="section">
+                <div id="knowledge-container"></div>
             </div>
             
             <!-- Export Section -->
             <div id="export-section" class="section">
                 <h1>💾 Data Export</h1>
                 <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Export all conversation data and user information
+                    Export conversation data and user information
                 </p>
                 
                 <div id="export-content">
-                    <button id="export-all-btn" class="button-primary">
-                        Download All Data (JSON)
-                    </button>
+                    <div style="margin-bottom: 3rem;">
+                        <button id="export-all-btn" class="button-primary" style="margin-bottom: 0.5rem;">
+                            📦 Download All Data (JSON)
+                        </button>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem;">
+                            Exports all users and conversations in a single file
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h3 style="margin-bottom: 1rem;">Export by User</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">
+                            Download data for individual users (useful for excluding test users)
+                        </p>
+                        <div id="export-user-list" style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                            <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                                Loading users...
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
+    <!-- Voice Management Modal -->
+    <div id="voice-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 900px; max-height: 85vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-color);">
+                <h2 style="margin: 0;">🎙️ Voice Management</h2>
+                <button id="close-voice-modal-btn" class="btn btn-secondary" style="font-size: 1.5rem; line-height: 1;">×</button>
+            </div>
+            
+            <div id="voice-status-message" class="hidden" style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 6px;"></div>
+            
+            <div style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Default Voice</label>
+                <select id="default-voice-select" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem;">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0;">Configured Voices</h3>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="browse-api-voices-btn" class="btn btn-secondary">🔍 Browse API Voices</button>
+                        <button id="add-voice-btn" class="btn btn-primary">+ Add Voice</button>
+                    </div>
+                </div>
+                <div id="voices-list" style="border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; min-height: 200px; background: var(--bg-primary);">
+                    <p style="text-align: center; color: var(--text-secondary);">Loading voices...</p>
+                </div>
+            </div>
+            
+            <div style="text-align: right;">
+                <button id="save-voice-config-btn" class="btn btn-primary">💾 Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Form Modal -->
+    <div id="voice-form-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 id="voice-form-title" style="margin-bottom: 1.5rem;">Add Voice</h2>
+            <form id="voice-form">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Voice ID (from ElevenLabs)</label>
+                    <input type="text" id="voice-id-input" required placeholder="e.g., 21m00Tcm4TlvDq8ikWAM" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Display Name</label>
+                    <input type="text" id="voice-name-input" required placeholder="e.g., Rachel - Professional" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Description (Optional)</label>
+                    <textarea id="voice-desc-input" rows="3" placeholder="Brief description..." style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem;"></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" id="cancel-voice-form-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Voice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- API Voices Browser Modal -->
+    <div id="api-voices-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0;">Browse ElevenLabs API Voices</h2>
+                <button id="close-api-voices-btn" class="btn btn-secondary" style="font-size: 1.5rem; line-height: 1;">×</button>
+            </div>
+            <div id="api-voices-list"></div>
+        </div>
+    </div>
+    
     <!-- Load Scripts -->
     <script src="/admin-dashboard.js"></script>
-    <script src="/admin-tools-manager.js"></script> <!-- ⭐ NEW: Tools manager UI -->
+    <script src="/admin-tools-manager.js"></script>
+    <script src="/admin-knowledge-manager.js"></script>
+    <script src="/admin-voice-manager.js"></script>
 </body>
 </html>

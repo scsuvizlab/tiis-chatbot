@@ -18,10 +18,13 @@ const MAX_TOKENS = 3000;
 async function sendOnboardingMessage(messages, userEmail = null) {
   console.log(`[Claude Service] Sending ${messages.length} messages to Claude for onboarding`);
   
+  // Get system prompt (may be custom from knowledge module)
+  const systemPrompt = await config.getOnboardingSystemPrompt(userEmail);
+  
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system: config.getOnboardingSystemPrompt(userEmail),
+    system: systemPrompt,
     messages: messages // Already formatted with only role and content
   });
   
