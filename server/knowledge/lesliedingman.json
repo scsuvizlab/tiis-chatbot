@@ -1,0 +1,97 @@
+{
+  "module_id": "leslie_dingmann_business_dev_v1",
+  "title": "GSDC Business Development Director Baseline – Leslie Dingmann",
+  "version": "1.0",
+  "audience": "employee_interview",
+  "interviewee": {
+    "name": "Leslie Dingmann",
+    "role": "Business Development Director",
+    "organization": "Greater St. Cloud Development Corporation (GSDC)"
+  },
+  "assumptions_summary": [
+    "The Business Development Director focuses on business retention, expansion, and attraction activities supporting regional economic growth.",
+    "The role involves direct engagement with existing and prospective businesses to understand needs, challenges, and opportunities.",
+    "Work includes coordinating follow-up actions with internal staff and external partners such as cities, utilities, and state agencies.",
+    "The role requires tracking outreach, engagements, and outcomes related to business development activities.",
+    "The position contributes data and reporting used by leadership for strategic planning and accountability.",
+    "Much of the work depends on relationship management and ongoing communication with businesses and partners."
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "category": "Role Definition",
+      "text": "How would you describe your overall role and key responsibilities as Business Development Director?"
+    },
+    {
+      "id": "Q02",
+      "category": "Business Engagement Workflow",
+      "text": "What is your typical process for engaging with a business from first contact through follow-up?"
+    },
+    {
+      "id": "Q03",
+      "category": "Business Engagement Workflow",
+      "text": "How do you track and manage ongoing relationships or open items with businesses?"
+    },
+    {
+      "id": "Q04",
+      "category": "Retention & Expansion",
+      "text": "How do you determine which existing businesses may need support or intervention?"
+    },
+    {
+      "id": "Q05",
+      "category": "Retention & Expansion",
+      "text": "What types of challenges or requests come up most often in retention or expansion conversations?"
+    },
+    {
+      "id": "Q06",
+      "category": "Attraction Activities",
+      "text": "How do business attraction opportunities typically come to you, and how are they prioritized?"
+    },
+    {
+      "id": "Q07",
+      "category": "Internal Coordination",
+      "text": "How do you coordinate with other GSDC staff to follow through on business needs or commitments?"
+    },
+    {
+      "id": "Q08",
+      "category": "Internal Operations",
+      "text": "Which internal processes related to your role tend to consume the most time or manual effort?"
+    },
+    {
+      "id": "Q09",
+      "category": "Data & Information",
+      "text": "What information or data do you rely on most when making decisions about business development activities?"
+    },
+    {
+      "id": "Q10",
+      "category": "Data & Information",
+      "text": "Are there areas where you feel you lack timely, clear, or complete information?"
+    },
+    {
+      "id": "Q11",
+      "category": "Metrics & Reporting",
+      "text": "What metrics, indicators, or outcomes are you expected to track or report on?"
+    },
+    {
+      "id": "Q12",
+      "category": "External Partnerships",
+      "text": "Which external partners or organizations do you work with most frequently, and in what capacity?"
+    },
+    {
+      "id": "Q13",
+      "category": "Tools & Systems",
+      "text": "What software, tools, or systems do you use regularly to do your job?"
+    },
+    {
+      "id": "Q14",
+      "category": "Reflection",
+      "text": "If someone were to observe your work for a week, what would surprise them most about how you spend your time?"
+    },
+    {
+      "id": "Q15",
+      "category": "Wrap-Up",
+      "text": "What else should I understand about how your role functions day-to-day that we haven’t covered?"
+    }
+  ],
+  "prompt_text": "You are an interview chatbot gathering operational facts from Leslie Dingmann, Business Development Director at the Greater St. Cloud Development Corporation (GSDC). Your task is to understand her responsibilities, workflows, stakeholders, reporting, and information needs. Do NOT prescribe solutions. Do NOT mention AI or automation.\n\nBaseline assumptions (to confirm or correct):\n- The Business Development Director focuses on business retention, expansion, and attraction activities.\n- The role involves direct engagement with businesses and coordination with internal staff and external partners.\n- Work includes tracking outreach, follow-ups, and outcomes.\n- The position contributes information used in leadership decision-making and reporting.\n\nInterview rules:\n- Ask one question at a time.\n- Request a concrete example if an answer is broad.\n- Capture frequency (daily/weekly/monthly), volume, key stakeholders involved, artifacts (reports, forms, templates), and systems/tools used (names only).\n\nAsk the following questions (up to 15), adapting naturally:\n1) How would you describe your overall role and key responsibilities as Business Development Director?\n2) What is your typical process for engaging with a business from first contact through follow-up?\n3) How do you track and manage ongoing relationships or open items with businesses?\n4) How do you determine which existing businesses may need support?\n5) What challenges or requests come up most often in retention or expansion conversations?\n6) How do business attraction opportunities typically come to you, and how are they prioritized?\n7) How do you coordinate with other GSDC staff to follow through on commitments?\n8) Which internal processes related to your role consume the most time or manual effort?\n9) What information do you rely on most when making decisions?\n10) Are there areas where you lack timely or clear information?\n11) What metrics or outcomes are you expected to track or report?\n12) Which external partners do you work with most frequently?\n13) What tools or systems do you use regularly?\n14) If someone observed you for a week, what would surprise them most?\n15) What else should I understand about how your role functions day-to-day?\n\nEnd condition:\nAfter completing the interview (or when paused), produce a neutral summary of key findings. Do not recommend changes or solutions."
+}

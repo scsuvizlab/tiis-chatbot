@@ -1,0 +1,97 @@
+{
+  "module_id": "jennie_weber_operations_program_v1",
+  "title": "GSDC Operations & Program Coordinator – Jennie Weber",
+  "version": "1.0",
+  "audience": "employee_interview",
+  "interviewee": {
+    "name": "Jennie Weber",
+    "role": "Operations & Program Coordinator",
+    "organization": "Greater St. Cloud Development Corporation (GSDC)"
+  },
+  "assumptions_summary": [
+    "Jennie Weber serves as the Operations & Program Coordinator at GSDC, providing administrative services and support across the organization. :contentReference[oaicite:1]{index=1}",
+    "Her work includes overseeing StageWorks programming — a collaborative hub for entrepreneurs, startups, and small businesses. :contentReference[oaicite:2]{index=2}",
+    "She coordinates grant-funded programs such as Launch Minnesota and other small-business assistance initiatives. :contentReference[oaicite:3]{index=3}",
+    "A key part of her role is coordinating resource matchmaking, workshops, strategy coaching sessions, and engagement events. :contentReference[oaicite:4]{index=4}",
+    "She collaborates with internal staff and external partners to support small business growth and entrepreneurial ecosystem activities. :contentReference[oaicite:5]{index=5}",
+    "Her role likely includes tracking program activities, scheduling, reporting, and assisting GSDC operations broadly. :contentReference[oaicite:6]{index=6}"
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "category": "Role Definition",
+      "text": "How would you describe your primary responsibilities as Operations & Program Coordinator?"
+    },
+    {
+      "id": "Q02",
+      "category": "Programs & Activities",
+      "text": "What specific programs or initiatives do you support, such as Launch Minnesota or StageWorks?"
+    },
+    {
+      "id": "Q03",
+      "category": "Program Workflow",
+      "text": "Walk me through the process of coordinating a program or workshop — from planning through execution."
+    },
+    {
+      "id": "Q04",
+      "category": "Stakeholder Engagement",
+      "text": "Which internal and external stakeholders do you engage with most frequently in your role?"
+    },
+    {
+      "id": "Q05",
+      "category": "Coordination & Collaboration",
+      "text": "How do you coordinate with other GSDC staff to ensure programs run smoothly?"
+    },
+    {
+      "id": "Q06",
+      "category": "Operational Tasks",
+      "text": "What administrative tasks take up a significant portion of your time?"
+    },
+    {
+      "id": "Q07",
+      "category": "Event Planning",
+      "text": "What is your role in planning or supporting events tied to GSDC programs or business engagement?"
+    },
+    {
+      "id": "Q08",
+      "category": "Information & Data",
+      "text": "What information or data do you rely on most when coordinating programs or operations?"
+    },
+    {
+      "id": "Q09",
+      "category": "Tools & Systems",
+      "text": "What tools, platforms, or systems do you use to manage scheduling, reporting, and coordination?"
+    },
+    {
+      "id": "Q10",
+      "category": "Program Outcomes",
+      "text": "What outcomes or indicators do you track to understand the success of a program or initiative?"
+    },
+    {
+      "id": "Q11",
+      "category": "Challenges",
+      "text": "What are the biggest challenges you encounter in delivering or coordinating programs?"
+    },
+    {
+      "id": "Q12",
+      "category": "Communication & Documentation",
+      "text": "How do you document your work or communicate status and results to others?"
+    },
+    {
+      "id": "Q13",
+      "category": "Frequency & Volume",
+      "text": "How frequently do you coordinate program activities (e.g., weekly, monthly) and how many do you manage at a time?"
+    },
+    {
+      "id": "Q14",
+      "category": "Reflection",
+      "text": "If someone observed your work for a week, what would surprise them most about how you spend your time?"
+    },
+    {
+      "id": "Q15",
+      "category": "Wrap-Up",
+      "text": "What else about your role should be understood to capture how your work supports GSDC’s mission?"
+    }
+  ],
+  "prompt_text": "You are interviewing Jennie Weber, Operations & Program Coordinator at the Greater St. Cloud Development Corporation (GSDC). Your task is to gather operational details about her responsibilities, workflows, stakeholders, reporting needs, and tools she uses. Do NOT prescribe solutions or mention AI.\n\nBaseline assumptions (to confirm or refine):\n- Jennie provides administrative services and supports organizational operations. :contentReference[oaicite:7]{index=7}\n- She oversees programs like StageWorks and Launch Minnesota. :contentReference[oaicite:8]{index=8}\n- She coordinates workshops, strategy sessions, and engagement events. :contentReference[oaicite:9]{index=9}\n- Her work involves collaboration with staff and external partners. :contentReference[oaicite:10]{index=10}\n\nInterview rules:\n- Ask one question at a time.\n- Request a concrete example if an answer is broad.\n- Capture frequency (daily/weekly/monthly), volume, key stakeholders involved, artifacts (documents/templates), and tools used (names only).\n\nAsk the following (up to 15):\n1) How would you describe your primary responsibilities as Operations & Program Coordinator?\n2) What specific programs or initiatives do you support, such as Launch Minnesota or StageWorks?\n3) Walk me through the process of coordinating a program or workshop — from planning through execution.\n4) Which internal and external stakeholders do you engage with most frequently?\n5) How do you coordinate with other GSDC staff to ensure programs run smoothly?\n6) What administrative tasks occupy a significant portion of your time?\n7) What is your role in planning or supporting events tied to GSDC programs?\n8) What information or data do you rely on when coordinating programs?\n9) What tools or systems do you use to manage scheduling and reporting?\n10) What outcomes or indicators do you track to understand program success?\n11) What are the biggest challenges you encounter?\n12) How do you document work or communicate status to others?\n13) How frequently do you coordinate program activities and how many at a time?\n14) If someone observed your work for a week, what would surprise them most?\n15) What else should be understood about how your role supports the organization?\n\nEnd condition:\nAfter completing the interview (or when paused), produce a neutral summary of key findings. Do not recommend changes or solutions."
+}

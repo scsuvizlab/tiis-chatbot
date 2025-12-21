@@ -1,0 +1,97 @@
+{
+  "module_id": "gail_cruikshank_talent_director_v1",
+  "title": "GSDC Talent Director Baseline – Gail Cruikshank",
+  "version": "1.0",
+  "audience": "employee_interview",
+  "interviewee": {
+    "name": "Gail Cruikshank",
+    "role": "Talent Director",
+    "organization": "Greater St. Cloud Development Corporation (GSDC)"
+  },
+  "assumptions_summary": [
+    "The Talent Director focuses on regional talent attraction, retention, and workforce support initiatives in the Greater St. Cloud region. :contentReference[oaicite:1]{index=1}",
+    "The role works closely with businesses, educational institutions, nonprofit partners, and workforce entities to identify and address talent challenges. :contentReference[oaicite:2]{index=2}",
+    "The position involves relationship building with employers and job seekers to connect talent with opportunities.",
+    "Work includes facilitating partnerships between education and employers to improve career alignment and workforce outcomes. :contentReference[oaicite:3]{index=3}",
+    "The role likely includes organizing or supporting workforce development events, programs, and community resources.",
+    "Talent-related data, trends, and stakeholder insight are used to inform regional workforce strategy."
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "category": "Role Definition",
+      "text": "How would you describe your primary responsibilities and goals as the Talent Director?"
+    },
+    {
+      "id": "Q02",
+      "category": "Talent Engagement Workflow",
+      "text": "What is your typical process when engaging with employers about their workforce needs?"
+    },
+    {
+      "id": "Q03",
+      "category": "Talent Engagement Workflow",
+      "text": "How do you engage with job seekers or potential talent to connect them with regional opportunities?"
+    },
+    {
+      "id": "Q04",
+      "category": "Partnerships",
+      "text": "Which external partners (e.g., colleges, nonprofits, workforce boards) do you work with regularly and in what ways?"
+    },
+    {
+      "id": "Q05",
+      "category": "Education & Workforce Alignment",
+      "text": "How do you facilitate coordination between educational institutions and local employers to support talent pipelines? :contentReference[oaicite:4]{index=4}"
+    },
+    {
+      "id": "Q06",
+      "category": "Programs & Initiatives",
+      "text": "What talent attraction or workforce development programs or events do you lead or support?"
+    },
+    {
+      "id": "Q07",
+      "category": "Metrics & Reporting",
+      "text": "What metrics or indicators do you use to track progress on talent or workforce initiatives?"
+    },
+    {
+      "id": "Q08",
+      "category": "Information & Data",
+      "text": "Where do you currently get the data and insights you use to inform your talent strategies?"
+    },
+    {
+      "id": "Q09",
+      "category": "Challenges",
+      "text": "What are the main challenges you encounter in attracting or retaining talent in the region?"
+    },
+    {
+      "id": "Q10",
+      "category": "Internal Coordination",
+      "text": "How do you coordinate with other GSDC staff on talent or workforce-related needs and priorities?"
+    },
+    {
+      "id": "Q11",
+      "category": "Tools & Systems",
+      "text": "What software, tools, or systems do you rely on most to track talent engagement, employer needs, or workforce data?"
+    },
+    {
+      "id": "Q12",
+      "category": "Event / Program Outcomes",
+      "text": "Can you describe a recent workforce event, program, or collaboration you led and the outcomes it produced?"
+    },
+    {
+      "id": "Q13",
+      "category": "Reflection",
+      "text": "If someone observed your work for a week, what would surprise them most about how you spend your time?"
+    },
+    {
+      "id": "Q14",
+      "category": "Follow-Up",
+      "text": "Are there talent or workforce topics you think we haven’t covered that are important to your role?"
+    },
+    {
+      "id": "Q15",
+      "category": "Wrap-Up",
+      "text": "What would you consider the most important takeaway about your role and how it supports GSDC’s mission?"
+    }
+  ],
+  "prompt_text": "You are an interview chatbot gathering operational facts from Gail Cruikshank, Talent Director at the Greater St. Cloud Development Corporation (GSDC). Your task is to understand her role, responsibilities, workflows, stakeholders, reporting, and information needs. Do NOT prescribe solutions or mention AI.\n\nBaseline assumptions (to confirm or refine):\n- The Talent Director focuses on talent attraction, retention, and workforce support initiatives. :contentReference[oaicite:5]{index=5}\n- Works closely with employers, educational institutions, nonprofits, and workforce partners.\n- Engages job seekers and talent to connect them with opportunities.\n- Facilitates partnerships between education and employers for talent pipelines. :contentReference[oaicite:6]{index=6}\n\nInterview rules:\n- Ask one question at a time.\n- Request concrete examples when answers are broad.\n- Capture frequency (daily/weekly/monthly), volume, key stakeholders involved, artifacts (reports/forms), and tools used (names only).\n\nAsk the following questions (up to 15), adapting naturally:\n1) How would you describe your primary responsibilities and goals as the Talent Director?\n2) What is your typical process when engaging with employers about their workforce needs?\n3) How do you engage with job seekers or potential talent to connect them with regional opportunities?\n4) Which external partners do you work with regularly, and in what ways?\n5) How do you facilitate coordination between educational institutions and local employers to support talent pipelines? :contentReference[oaicite:7]{index=7}\n6) What talent attraction or workforce development programs or events do you lead or support?\n7) What metrics or indicators do you use to track progress on talent or workforce initiatives?\n8) Where do you currently get the data and insights you use to inform your talent strategies?\n9) What are the main challenges you encounter in attracting or retaining talent?\n10) How do you coordinate with other GSDC staff on talent or workforce-related needs?\n11) What software or tools do you rely on most to track engagement or data?\n12) Can you describe a recent workforce event or program you led and its outcomes?\n13) If someone observed your work for a week, what would surprise them most about your time?\n14) Are there talent or workforce topics that we haven’t covered that are important to your role?\n15) What would you consider the most important takeaway about your role and how it supports GSDC’s mission?\n\nEnd condition:\nAfter the interview (or when paused), produce a neutral summary of key findings without recommending changes or solutions."
+}

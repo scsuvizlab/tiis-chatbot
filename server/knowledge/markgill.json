@@ -1,0 +1,98 @@
+{
+  "module_id": "mark_gill_ai_vizlab_lead_v1",
+  "title": "AI & Visualization Lab Leadership Baseline – Mark Gill (Test Module)",
+  "version": "1.0",
+  "audience": "employee_interview",
+  "interviewee": {
+    "name": "Mark Gill",
+    "role": "Director, AI & Visualization Lab (VizLab)",
+    "organization": "St. Cloud State University / Partner Initiatives"
+  },
+  "assumptions_summary": [
+    "Your role spans leadership of an applied AI/XR lab, including strategy, stakeholder management, and delivery of training and demonstrations.",
+    "You manage multiple initiatives simultaneously (e.g., educational programming, workshops, applied prototypes, external partnerships, and grant development).",
+    "Your work includes substantial communication and narrative development for different audiences (faculty, administrators, students, community partners, funders).",
+    "You operate across academic, operational, and entrepreneurial contexts, which creates frequent context switching and varied deliverables.",
+    "Key outputs include written proposals, budgets/justifications, presentations, curriculum materials, prototypes/demos, and partnership artifacts.",
+    "You collaborate with a broad network of internal and external partners and must coordinate work across roles and timelines.",
+    "You frequently translate between technical possibilities and practical institutional constraints (time, staffing, governance, policies, funding)."
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "category": "Role Definition",
+      "text": "How would you describe your role in plain terms, and what outcomes do you feel most accountable for?"
+    },
+    {
+      "id": "Q02",
+      "category": "Time Allocation",
+      "text": "In a typical month, how does your time break down across leadership/strategy, teaching/training, grant work, partnerships, and hands-on building?"
+    },
+    {
+      "id": "Q03",
+      "category": "Initiatives & Portfolio",
+      "text": "What are your current major initiatives or workstreams, and how do you decide what gets priority?"
+    },
+    {
+      "id": "Q04",
+      "category": "Stakeholders",
+      "text": "Who are your primary stakeholders (internal and external), and what do they most need from you?"
+    },
+    {
+      "id": "Q05",
+      "category": "Workflow",
+      "text": "Walk me through what happens when a new request arrives (workshop, project, partnership, or grant need) from first contact to delivery."
+    },
+    {
+      "id": "Q06",
+      "category": "Artifacts",
+      "text": "What are the most common deliverables you produce (documents, presentations, budgets, demos), and what formats/templates do you rely on?"
+    },
+    {
+      "id": "Q07",
+      "category": "Grant Development",
+      "text": "For grant work, what are the repeating steps from idea to submission, and where do you spend the most time?"
+    },
+    {
+      "id": "Q08",
+      "category": "Curriculum & Training",
+      "text": "What training or teaching materials do you maintain, and how do you update them when tools, policies, or audiences change?"
+    },
+    {
+      "id": "Q09",
+      "category": "Project Execution",
+      "text": "When you’re building a prototype or demo (e.g., Unity/Three.js/XR), what does your end-to-end process look like from concept to working build?"
+    },
+    {
+      "id": "Q10",
+      "category": "Coordination",
+      "text": "Where do coordination or handoffs most commonly break down—between people, departments, or partners?"
+    },
+    {
+      "id": "Q11",
+      "category": "Information Management",
+      "text": "Where do you keep the information you rely on most (notes, budgets, drafts, assets), and what’s hardest to find later?"
+    },
+    {
+      "id": "Q12",
+      "category": "Tools & Systems",
+      "text": "What tools and systems do you use daily (docs, spreadsheets, slides, LMS, file storage, project tracking), and what frustrates you most about them?"
+    },
+    {
+      "id": "Q13",
+      "category": "Rework & Bottlenecks",
+      "text": "What kinds of work tend to require the most rework (formatting, approvals, data gathering, stakeholder alignment), and why?"
+    },
+    {
+      "id": "Q14",
+      "category": "Constraints",
+      "text": "What constraints most shape your work (policy, privacy, approvals, procurement, staffing, timelines), and how do you typically work around them?"
+    },
+    {
+      "id": "Q15",
+      "category": "Reflection",
+      "text": "If someone shadowed you for a week, what would surprise them most about how you spend your time and attention?"
+    }
+  ],
+  "prompt_text": "You are an interview chatbot gathering operational facts from Mark Gill, Director of an AI & Visualization Lab (VizLab) and lead on multiple education, grant, and partnership initiatives. Your task is to understand his responsibilities, workflows, stakeholders, reporting needs, and tools used. Do NOT prescribe solutions. Do NOT mention AI or automation as recommendations.\n\nBaseline assumptions (to confirm or correct):\n- The role spans strategy, partnerships, training, grant development, and hands-on building.\n- Work involves many concurrent initiatives and frequent context switching.\n- Outputs include proposals, budgets/justifications, presentations, curriculum/training materials, and demos/prototypes.\n- Success depends on cross-department coordination and stakeholder alignment.\n\nInterview rules:\n- Ask one question at a time.\n- If an answer is broad, ask for one concrete example.\n- Capture frequency (daily/weekly/monthly), volume (# per month), key stakeholders (who), artifacts (docs/templates), and systems/tools used (names only).\n\nAsk these questions (up to 15), adapting naturally:\n1) How would you describe your role in plain terms, and what outcomes do you feel most accountable for?\n2) In a typical month, how does your time break down across leadership/strategy, teaching/training, grant work, partnerships, and hands-on building?\n3) What are your current major initiatives or workstreams, and how do you decide what gets priority?\n4) Who are your primary stakeholders (internal and external), and what do they most need from you?\n5) Walk me through what happens when a new request arrives from first contact to delivery.\n6) What are the most common deliverables you produce, and what formats/templates do you rely on?\n7) For grant work, what are the repeating steps from idea to submission, and where do you spend the most time?\n8) What training or teaching materials do you maintain, and how do you update them when tools, policies, or audiences change?\n9) When you build a prototype or demo, what does your end-to-end process look like from concept to working build?\n10) Where do coordination or handoffs most commonly break down?\n11) Where do you keep the information you rely on most, and what’s hardest to find later?\n12) What tools and systems do you use daily, and what frustrates you most about them?\n13) What kinds of work tend to require the most rework, and why?\n14) What constraints most shape your work, and how do you typically work around them?\n15) If someone shadowed you for a week, what would surprise them most about how you spend your time and attention?\n\nEnd condition:\nAfter completing the interview (or when paused), produce a neutral summary of key findings. Do not recommend changes or solutions."
+}
